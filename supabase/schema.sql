@@ -47,7 +47,7 @@ begin
   delete from acessos_pendentes where email = new.email;
   return new;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer set search_path = public;
 
 create trigger on_auth_user_created
   after insert on auth.users
@@ -170,7 +170,7 @@ alter table aulas_particulares_gravadas enable row level security;
 create function is_admin()
 returns boolean as $$
   select coalesce((select is_admin from profiles where id = auth.uid()), false);
-$$ language sql security definer stable;
+$$ language sql security definer stable set search_path = public;
 
 -- perfis: cada um vê e edita o próprio; admin vê todos
 create policy "ver proprio perfil" on profiles for select using (id = auth.uid() or is_admin());
