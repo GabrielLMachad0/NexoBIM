@@ -17,13 +17,13 @@ const CURSOS = [
     sigla: 'MEP',
     nome: 'Revit MEP',
     niveis: 'Fundamentos · Intermediário · Avançado',
-    detalhe: 'Coordenação de instalações hidráulicas, elétricas e climatização dentro do modelo BIM.',
+    detalhe: 'Coordenação de instalações hidrossanitárias e climatização dentro do modelo BIM.',
   },
   {
-    sigla: 'CAD',
-    nome: 'AutoCAD',
-    niveis: 'Fundamentos · Intermediário',
-    detalhe: 'Desenho técnico 2D para plantas, cortes e detalhamentos de arquitetura e engenharia.',
+    sigla: 'MD',
+    nome: 'MicroDesk para Revit',
+    niveis: 'Primeiros passos',
+    detalhe: 'Instalação e comandos do MicroDesk, plugin que acelera a modelagem no Revit.',
   },
 ];
 
@@ -42,7 +42,7 @@ export default function Inicio() {
       </header>
 
       <section className="envolucro-largo hero-nexobim">
-        <span className="etiqueta">Cursos de BIM, Revit, AutoCAD e MEP</span>
+        <span className="etiqueta">Cursos de BIM, Revit e MEP</span>
         <h1>Aprenda BIM do fundamento à execução do projeto.</h1>
         <p className="hero-legenda">
           Vídeo aulas organizadas por nível, tarefas práticas e certificado ao concluir
@@ -95,7 +95,7 @@ export default function Inicio() {
       <section className="envolucro-largo painel-professora">
         <div className="painel">
           <span className="etiqueta">Quem ensina</span>
-          <p className="painel-titulo">Raíssa, professora de BIM/Revit/AutoCAD/MEP</p>
+          <p className="painel-titulo">Raíssa, professora de BIM/Revit/MEP</p>
           <p className="cartao-curso-texto">
             Conteúdo em vídeo publicado também no canal do YouTube{' '}
             <a href={YOUTUBE_URL} target="_blank" rel="noreferrer">@nexobim3550</a>,
