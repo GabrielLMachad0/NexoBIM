@@ -1,0 +1,125 @@
+const YOUTUBE_URL = 'https://youtube.com/@nexobim3550';
+
+const CURSOS = [
+  {
+    sigla: 'BIM',
+    nome: 'Fundamentos de BIM',
+    niveis: 'Fundamentos · Intermediário · Avançado',
+    detalhe: 'A metodologia BIM na prática: fluxo colaborativo, compatibilização e organização do projeto.',
+  },
+  {
+    sigla: 'REVIT',
+    nome: 'Revit Architecture',
+    niveis: 'Fundamentos · Intermediário · Avançado',
+    detalhe: 'Modelagem arquitetônica, documentação técnica e detalhamento executivo em Revit.',
+  },
+  {
+    sigla: 'MEP',
+    nome: 'Revit MEP',
+    niveis: 'Fundamentos · Intermediário · Avançado',
+    detalhe: 'Coordenação de instalações hidráulicas, elétricas e climatização dentro do modelo BIM.',
+  },
+  {
+    sigla: 'CAD',
+    nome: 'AutoCAD',
+    niveis: 'Fundamentos · Intermediário',
+    detalhe: 'Desenho técnico 2D para plantas, cortes e detalhamentos de arquitetura e engenharia.',
+  },
+];
+
+export default function Inicio() {
+  return (
+    <div>
+      <header className="topo">
+        <a className="marca" href="/">
+          Nexo<span>BIM</span>
+        </a>
+        <nav>
+          <a href="#cursos">Cursos</a>
+          <a href={YOUTUBE_URL} target="_blank" rel="noreferrer">YouTube</a>
+          <a href="/login">Entrar</a>
+        </nav>
+      </header>
+
+      <section className="envolucro-largo hero-nexobim">
+        <span className="etiqueta">Cursos de BIM, Revit, AutoCAD e MEP</span>
+        <h1>Aprenda BIM do fundamento à execução do projeto.</h1>
+        <p className="hero-legenda">
+          Vídeo aulas organizadas por nível, tarefas práticas e certificado ao concluir
+          cada etapa. Assista no seu ritmo e evolua com um plano claro de estudo.
+        </p>
+        <div className="hero-botoes">
+          <a className="botao" href="/login">Entrar ou criar conta</a>
+          <a className="botao fantasma" href={YOUTUBE_URL} target="_blank" rel="noreferrer">
+            Ver aulas no YouTube
+          </a>
+        </div>
+      </section>
+
+      <section className="envolucro-largo" id="cursos">
+        <h2 className="titulo-secao">Cursos disponíveis</h2>
+        <p className="legenda-secao">Cada curso é dividido em níveis, com aulas, tarefas e certificado próprio.</p>
+        <div className="grade-cursos">
+          {CURSOS.map((curso) => (
+            <article className="painel cartao-curso" key={curso.sigla}>
+              <span className="codigo-nivel">{curso.sigla}</span>
+              <p className="painel-titulo">{curso.nome}</p>
+              <p className="painel-legenda">{curso.niveis}</p>
+              <p className="cartao-curso-texto">{curso.detalhe}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="envolucro-largo">
+        <h2 className="titulo-secao">Como funciona</h2>
+        <div className="grade-passos">
+          <article className="painel">
+            <span className="codigo-nivel">01</span>
+            <p className="painel-titulo">Crie sua conta</p>
+            <p className="cartao-curso-texto">Cadastre-se com e-mail e senha para acompanhar seu progresso.</p>
+          </article>
+          <article className="painel">
+            <span className="codigo-nivel">02</span>
+            <p className="painel-titulo">Assista por nível</p>
+            <p className="cartao-curso-texto">Vídeo aulas e tarefas organizadas do fundamento ao avançado.</p>
+          </article>
+          <article className="painel">
+            <span className="codigo-nivel">03</span>
+            <p className="painel-titulo">Tire seu certificado</p>
+            <p className="cartao-curso-texto">Ao concluir 100% de um nível, o certificado é emitido na hora.</p>
+          </article>
+        </div>
+      </section>
+
+      <section className="envolucro-largo painel-professora">
+        <div className="painel">
+          <span className="etiqueta">Quem ensina</span>
+          <p className="painel-titulo">Raíssa, professora de BIM/Revit/AutoCAD/MEP</p>
+          <p className="cartao-curso-texto">
+            Conteúdo em vídeo publicado também no canal do YouTube{' '}
+            <a href={YOUTUBE_URL} target="_blank" rel="noreferrer">@nexobim3550</a>,
+            além de aulas particulares sob medida para quem precisa de um acompanhamento
+            mais próximo.
+          </p>
+          <a className="botao fantasma" href={YOUTUBE_URL} target="_blank" rel="noreferrer">
+            Inscreva-se no canal
+          </a>
+        </div>
+      </section>
+
+      <section className="envolucro-largo secao-final">
+        <div className="painel">
+          <p className="painel-titulo">Pronto para começar?</p>
+          <p className="painel-legenda">Assinatura para acompanhar os cursos por nível, ou aula particular sob medida.</p>
+          <a className="botao" href="/login">Entrar ou criar conta</a>
+        </div>
+      </section>
+
+      <footer className="rodape-nexobim">
+        <span>NexoBIM</span>
+        <a href={YOUTUBE_URL} target="_blank" rel="noreferrer">YouTube</a>
+      </footer>
+    </div>
+  );
+}
