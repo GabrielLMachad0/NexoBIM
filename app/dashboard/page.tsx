@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { supabase } from '../../lib/supabaseClient';
 import Cabecalho from '../../components/Cabecalho';
 
@@ -100,41 +101,8 @@ export default function Dashboard() {
     setCarregando(false);
   }
 
-  async function marcarAulaAssistida(userId: string, aulaId: string) {
-    await supabase.from('progresso_aulas').upsert({ aluno_id: userId, aula_id: aulaId });
-    setAssistidas((s) => new Set(s).add(aulaId));
-  }
-
-  async function marcarTarefaFeita(userId: string, tarefaId: string) {
-    await supabase.from('progresso_tarefas').upsert({ aluno_id: userId, tarefa_padrao_id: tarefaId });
-    setTarefasFeitas((s) => new Set(s).add(tarefaId));
-  }
-
-  async function gerarCertificado(nivel: Nivel, nomeCurso: string) {
-    const { data: sessao } = await supabase.auth.getSession();
-    const userId = sessao.session!.user.id;
-
-    if (!certificados.has(nivel.id)) {
-      await supabase.from('certificados').insert({ aluno_id: userId, nivel_id: nivel.id });
-      setCertificados((s) => new Set(s).add(nivel.id));
-    }
-
-    const { jsPDF } = await import('jspdf');
-    const doc = new jsPDF({ orientation: 'landscape' });
-    doc.setFontSize(24);
-    doc.text('Certificado de conclusão', 148, 60, { align: 'center' });
-    doc.setFontSize(16);
-    doc.text(`${perfil?.nome}`, 148, 90, { align: 'center' });
-    doc.setFontSize(12);
-    doc.text(`concluiu o nível "${nivel.nome}" do curso "${nomeCurso}"`, 148, 105, { align: 'center' });
-    doc.text(new Date().toLocaleDateString('pt-BR'), 148, 120, { align: 'center' });
-    doc.save(`certificado-${nivel.nome}.pdf`);
-  }
-
   if (carregando) return <div className="envolucro">Carregando...</div>;
   if (!perfil) return null;
-
-  const userIdAtual = () => supabase.auth.getSession().then((s) => s.data.session!.user.id);
 
   return (
     <div>
@@ -190,75 +158,34 @@ export default function Dashboard() {
           <>
             <h2 style={{ fontSize: 15, fontWeight: 500, color: 'var(--texto-suave)', marginTop: 28 }}>Seus cursos</h2>
 
-            {cursos.map((curso) =>
-              curso.niveis
-                .sort((a, b) => a.ordem - b.ordem)
-                .map((nivel) => {
-                  const totalItens = nivel.aulas.length + nivel.tarefas_padrao.length;
-                  const feitos =
-                    nivel.aulas.filter((a) => assistidas.has(a.id)).length +
-                    nivel.tarefas_padrao.filter((t) => tarefasFeitas.has(t.id)).length;
-                  const completo = totalItens > 0 && feitos === totalItens;
+            <div className="grade-niveis">
+              {cursos.map((curso) =>
+                curso.niveis
+                  .sort((a, b) => a.ordem - b.ordem)
+                  .map((nivel) => {
+                    const totalItens = nivel.aulas.length + nivel.tarefas_padrao.length;
+                    const feitos =
+                      nivel.aulas.filter((a) => assistidas.has(a.id)).length +
+                      nivel.tarefas_padrao.filter((t) => tarefasFeitas.has(t.id)).length;
+                    const completo = totalItens > 0 && feitos === totalItens;
 
-                  return (
-                    <div className="painel" key={nivel.id}>
-                      <span className="codigo-nivel">N{String(nivel.ordem).padStart(2, '0')}</span>
-                      <p className="painel-titulo">{nivel.nome}</p>
-                      <p className="painel-legenda">{curso.nome}</p>
-
-                      {nivel.aulas.sort((a, b) => a.ordem - b.ordem).map((aula) => (
-                        <div className="aula-linha" key={aula.id}>
-                          <div className="aula-titulo">
-                            <a href={`https://www.youtube.com/watch?v=${aula.youtube_id}`} target="_blank" rel="noreferrer">
-                              {aula.titulo}
-                            </a>
-                          </div>
-                          {assistidas.has(aula.id) ? (
-                            <span className="marcador feito">assistida</span>
-                          ) : (
-                            <button
-                              className="botao fantasma"
-                              style={{ padding: '4px 10px', fontSize: 12 }}
-                              onClick={async () => marcarAulaAssistida(await userIdAtual(), aula.id)}
-                            >
-                              marcar como assistida
-                            </button>
-                          )}
-                        </div>
-                      ))}
-
-                      {nivel.tarefas_padrao.map((tarefa) => (
-                        <div className="aula-linha" key={tarefa.id}>
-                          <div className="aula-titulo">{tarefa.titulo}</div>
-                          {tarefasFeitas.has(tarefa.id) ? (
-                            <span className="marcador feito">concluída</span>
-                          ) : (
-                            <button
-                              className="botao fantasma"
-                              style={{ padding: '4px 10px', fontSize: 12 }}
-                              onClick={async () => marcarTarefaFeita(await userIdAtual(), tarefa.id)}
-                            >
-                              marcar como concluída
-                            </button>
-                          )}
-                        </div>
-                      ))}
-
-                      {completo && (
-                        <div style={{ marginTop: 16 }}>
-                          {certificados.has(nivel.id) ? (
-                            <div className="selo-certificado">Certificado emitido para este nível.</div>
-                          ) : (
-                            <button className="botao selo" onClick={() => gerarCertificado(nivel, curso.nome)}>
-                              Gerar certificado
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })
-            )}
+                    return (
+                      <Link href={`/dashboard/nivel/${nivel.id}`} className="painel cartao-nivel" key={nivel.id}>
+                        <span className="etiqueta-nivel">{nivel.nome}</span>
+                        <p className="painel-titulo">{curso.nome}</p>
+                        <p className="painel-legenda">{nivel.aulas.length} aula{nivel.aulas.length === 1 ? '' : 's'}</p>
+                        {completo ? (
+                          <span className="marcador feito">
+                            {certificados.has(nivel.id) ? 'certificado emitido' : 'concluído'}
+                          </span>
+                        ) : (
+                          <span className="marcador">{feitos}/{totalItens} concluído{feitos === 1 ? '' : 's'}</span>
+                        )}
+                      </Link>
+                    );
+                  })
+              )}
+            </div>
           </>
         )}
       </div>

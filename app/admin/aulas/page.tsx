@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
 import Cabecalho from '../../../components/Cabecalho';
 
-type Aula = { id: string; titulo: string; youtube_id: string; ordem: number };
+type Aula = { id: string; titulo: string; youtube_id: string; ordem: number; descricao: string };
 type TarefaPadrao = { id: string; titulo: string };
 type Nivel = { id: string; nome: string; curso_id: string; aulas: Aula[]; tarefas_padrao: TarefaPadrao[] };
 type Curso = { id: string; nome: string; niveis: Nivel[] };
@@ -23,6 +23,7 @@ export default function AdminAulas() {
   const [nivelEscolhido, setNivelEscolhido] = useState('');
   const [tituloAula, setTituloAula] = useState('');
   const [linkVideo, setLinkVideo] = useState('');
+  const [descricaoAula, setDescricaoAula] = useState('');
   const [tituloTarefa, setTituloTarefa] = useState('');
   const [descricaoTarefa, setDescricaoTarefa] = useState('');
   const [mensagem, setMensagem] = useState('');
@@ -43,7 +44,7 @@ export default function AdminAulas() {
   async function carregar() {
     const { data } = await supabase
       .from('cursos')
-      .select('id, nome, niveis(id, nome, curso_id, aulas(id, titulo, youtube_id, ordem), tarefas_padrao(id, titulo))')
+      .select('id, nome, niveis(id, nome, curso_id, aulas(id, titulo, descricao, youtube_id, ordem), tarefas_padrao(id, titulo))')
       .order('ordem');
     setCursos((data as any) || []);
   }
@@ -55,11 +56,13 @@ export default function AdminAulas() {
     await supabase.from('aulas').insert({
       nivel_id: nivelEscolhido,
       titulo: tituloAula,
+      descricao: descricaoAula,
       youtube_id: extrairYoutubeId(linkVideo),
       ordem: (nivel?.aulas.length || 0) + 1,
     });
     setTituloAula('');
     setLinkVideo('');
+    setDescricaoAula('');
     setMensagem('Aula adicionada.');
     carregar();
   }
@@ -101,6 +104,7 @@ export default function AdminAulas() {
             <label className="rotulo">Nova aula</label>
             <input className="campo" placeholder="Título da aula" value={tituloAula} onChange={(e) => setTituloAula(e.target.value)} />
             <input className="campo" placeholder="Link ou ID do vídeo no YouTube" value={linkVideo} onChange={(e) => setLinkVideo(e.target.value)} />
+            <input className="campo" placeholder="Descrição (opcional)" value={descricaoAula} onChange={(e) => setDescricaoAula(e.target.value)} />
             <button className="botao" type="submit">Adicionar aula</button>
           </form>
 

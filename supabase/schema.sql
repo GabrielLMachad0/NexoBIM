@@ -73,6 +73,7 @@ create table aulas (
   id uuid primary key default gen_random_uuid(),
   nivel_id uuid not null references niveis(id) on delete cascade,
   titulo text not null,
+  descricao text not null default '',
   youtube_id text not null,
   ordem int not null default 0
 );
