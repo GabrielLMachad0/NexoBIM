@@ -57,6 +57,30 @@ npm run dev
 
 Abra http://localhost:3000
 
-## Publicando
+## Publicando na Vercel
 
-O jeito mais simples é subir esse projeto num repositório do GitHub e conectar no [vercel.com](https://vercel.com) (gratuito, e feito pela mesma empresa do Next.js) — ele publica sozinho a cada alteração. As variáveis de `.env.local` precisam ser configuradas lá também, na aba Environment Variables.
+O código já está no GitHub em `github.com/GabrielLMachad0/NexoBIM`. A Vercel é a hospedagem mais simples pra Next.js (gratuita pra começar, feita pela mesma empresa) e publica sozinha a cada `git push`.
+
+1. **Criar conta na Vercel:** [vercel.com](https://vercel.com) → **Sign Up** → entrar com a conta do GitHub (mais simples, já autoriza o acesso ao repositório).
+2. **Importar o projeto:** no painel, **Add New... → Project** → escolha o repositório `NexoBIM` na lista (se não aparecer, clique em "Adjust GitHub App Permissions" e libere o acesso a esse repositório) → **Import**.
+3. **Configurar as variáveis de ambiente:** antes de clicar em Deploy, abra a seção **Environment Variables** e cadastre uma por uma (nome exatamente como abaixo, valor conforme o Supabase/Hotmart/Kiwify de cada um):
+
+   | Nome | De onde vem |
+   |---|---|
+   | `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Project Settings → API → Project URL |
+   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Project Settings → API → chave `anon`/`publishable` |
+   | `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API → chave `service_role`/`secret` (sensível — só aqui, nunca no código) |
+   | `HOTMART_HOTTOK` | Hotmart → Ferramentas → Webhook → aba Autenticação |
+   | `HOTMART_ID_PRODUTO_ASSINATURA` | Hotmart → o produto de assinatura recorrente |
+   | `HOTMART_ID_PRODUTO_AULA_PARTICULAR` | Hotmart → o produto de aula avulsa |
+   | `KIWIFY_WEBHOOK_TOKEN` | Um token que você mesmo escolhe, usado também na URL do webhook |
+   | `KIWIFY_ID_PRODUTO_ASSINATURA` | Kiwify → o produto de assinatura recorrente |
+   | `KIWIFY_ID_PRODUTO_AULA_PARTICULAR` | Kiwify → o produto de aula avulsa |
+
+   Pode publicar só com as duas primeiras (Supabase) preenchidas — a página de cursos, o login e o dashboard já funcionam. As de Hotmart/Kiwify só passam a ser necessárias quando for ligar o pagamento.
+4. **Deploy:** clique em **Deploy** e aguarde o build (1–2 minutos). Ao final, a Vercel dá uma URL do tipo `nexobim.vercel.app`.
+5. **Testar o fluxo:** abra a URL publicada → `/login` → crie uma conta de teste → confira no Supabase (tabela `profiles`) se o perfil foi criado.
+6. **Tornar a Raíssa admin:** depois que ela criar a própria conta pela URL publicada, rode no SQL Editor do Supabase o comando da seção acima (`update profiles set is_admin = true...`) — só então `/admin` fica acessível pra ela.
+7. **Atualizações futuras:** qualquer novo `git push` na branch `main` do GitHub reflete automaticamente na Vercel, sem precisar repetir esses passos — só a criação de variável de ambiente nova é manual.
+
+**Domínio próprio (opcional):** em Project Settings → Domains da Vercel, dá pra apontar um domínio como `nexobim.com.br` em vez do `.vercel.app`, se vocês já tiverem um registrado.
