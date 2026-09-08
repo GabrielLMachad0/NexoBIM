@@ -18,6 +18,21 @@ type Nivel = {
   cursos: { nome: string };
 };
 
+async function imagemComoDataUrl(caminho: string): Promise<string | null> {
+  try {
+    const resposta = await fetch(caminho);
+    const blob = await resposta.blob();
+    return await new Promise((resolve, reject) => {
+      const leitor = new FileReader();
+      leitor.onloadend = () => resolve(leitor.result as string);
+      leitor.onerror = reject;
+      leitor.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
 export default function NivelPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -128,19 +143,73 @@ export default function NivelPage() {
     }
 
     const urlVerificacao = `${window.location.origin}/certificado/${codigo}`;
+    const logo = await imagemComoDataUrl('/logo-nexobim-preto.png');
 
     const { jsPDF } = await import('jspdf');
     const doc = new jsPDF({ orientation: 'landscape' });
-    doc.setFontSize(24);
-    doc.text('Certificado de conclusão', 148, 60, { align: 'center' });
-    doc.setFontSize(16);
-    doc.text(nomeAluno, 148, 90, { align: 'center' });
-    doc.setFontSize(12);
-    doc.text(`concluiu o nível "${nivel.nome}" do curso "${nivel.cursos.nome}"`, 148, 105, { align: 'center' });
-    doc.text(new Date().toLocaleDateString('pt-BR'), 148, 120, { align: 'center' });
-    doc.setFontSize(10);
-    doc.text(`Verifique em ${urlVerificacao}`, 148, 150, { align: 'center' });
-    doc.save(`certificado-${nivel.nome}.pdf`);
+    const largura = doc.internal.pageSize.getWidth();
+    const meio = largura / 2;
+
+    const CIANO = '#05e0e0';
+    const CIANO_TEXTO = '#027373';
+    const CARVAO = '#1a1a1c';
+    const CINZA = '#5b5b60';
+
+    doc.setFillColor(CIANO);
+    doc.rect(0, 0, largura, 6, 'F');
+
+    doc.setDrawColor(CARVAO);
+    doc.setLineWidth(0.6);
+    doc.rect(10, 14, largura - 20, 182);
+
+    if (logo) {
+      const logoLargura = 62;
+      const logoAltura = logoLargura / (2490 / 1004);
+      doc.addImage(logo, 'PNG', meio - logoLargura / 2, 24, logoLargura, logoAltura);
+    }
+
+    doc.setTextColor(CARVAO);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(22);
+    doc.text('Certificado de Conclusão', meio, 68, { align: 'center' });
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(CINZA);
+    doc.text('Este certificado confere a', meio, 80, { align: 'center' });
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(20);
+    doc.setTextColor(CIANO_TEXTO);
+    doc.text(nomeAluno, meio, 94, { align: 'center' });
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(CARVAO);
+    doc.text(
+      `a conclusão do nível "${nivel.nome}", do curso "${nivel.cursos.nome}", na plataforma NexoBIM.`,
+      meio, 105, { align: 'center' },
+    );
+
+    const temas = aulasOrdenadas.map((a) => a.titulo).join('  ·  ');
+    doc.setFontSize(9);
+    doc.setTextColor(CINZA);
+    doc.text('Temas abordados:', meio, 118, { align: 'center' });
+    const linhasTemas = doc.splitTextToSize(temas, largura - 60);
+    doc.text(linhasTemas, meio, 124, { align: 'center' });
+
+    const yRodape = 178;
+    doc.setDrawColor('#cccccc');
+    doc.setLineWidth(0.2);
+    doc.line(20, yRodape, largura - 20, yRodape);
+
+    doc.setFontSize(9);
+    doc.setTextColor(CINZA);
+    doc.text(`Emitido em ${new Date().toLocaleDateString('pt-BR')}`, 20, yRodape + 8);
+    doc.text(`Código de verificação: ${codigo}`, largura - 20, yRodape + 8, { align: 'right' });
+    doc.text(`Verifique em ${urlVerificacao}`, meio, yRodape + 8, { align: 'center' });
+
+    doc.save(`certificado-nexobim-${nivel.nome}.pdf`);
   }
 
   if (carregando) return <div className="envolucro">Carregando...</div>;
