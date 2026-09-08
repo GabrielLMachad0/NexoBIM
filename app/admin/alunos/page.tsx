@@ -6,12 +6,19 @@ import { supabase } from '../../../lib/supabaseClient';
 import Cabecalho from '../../../components/Cabecalho';
 
 type Aluno = { id: string; nome: string; is_assinante: boolean; is_aluno_particular: boolean };
+type AcessoPendente = { email: string; is_assinante: boolean; is_aluno_particular: boolean; atualizado_em: string };
 
 export default function AdminAlunos() {
   const router = useRouter();
   const [carregando, setCarregando] = useState(true);
   const [alunos, setAlunos] = useState<Aluno[]>([]);
+  const [pendentes, setPendentes] = useState<AcessoPendente[]>([]);
   const [expandido, setExpandido] = useState<string | null>(null);
+
+  const [emailConvite, setEmailConvite] = useState('');
+  const [assinanteConvite, setAssinanteConvite] = useState(false);
+  const [particularConvite, setParticularConvite] = useState(true);
+  const [mensagemConvite, setMensagemConvite] = useState('');
 
   const [motivo, setMotivo] = useState('');
   const [conteudoPlano, setConteudoPlano] = useState('');
@@ -32,6 +39,7 @@ export default function AdminAlunos() {
     const { data: perfil } = await supabase.from('profiles').select('is_admin').eq('id', sessao.session.user.id).single();
     if (!perfil?.is_admin) { router.push('/dashboard'); return; }
     await carregar();
+    await carregarPendentes();
     setCarregando(false);
   }
 
@@ -42,6 +50,57 @@ export default function AdminAlunos() {
       .eq('is_admin', false)
       .order('nome');
     setAlunos((data as any) || []);
+  }
+
+  async function carregarPendentes() {
+    const { data } = await supabase
+      .from('acessos_pendentes')
+      .select('email, is_assinante, is_aluno_particular, atualizado_em')
+      .order('atualizado_em', { ascending: false });
+    setPendentes((data as any) || []);
+  }
+
+  async function liberarAcessoPorEmail(e: React.FormEvent) {
+    e.preventDefault();
+    const email = emailConvite.trim().toLowerCase();
+    if (!email) return;
+
+    const { data: perfilExistente } = await supabase
+      .from('profiles')
+      .select('id, is_assinante, is_aluno_particular')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (perfilExistente) {
+      await supabase.from('profiles').update({
+        is_assinante: assinanteConvite || perfilExistente.is_assinante,
+        is_aluno_particular: particularConvite || perfilExistente.is_aluno_particular,
+      }).eq('id', perfilExistente.id);
+      setMensagemConvite(`${email} já tinha conta — acesso liberado, já pode entrar.`);
+      carregar();
+    } else {
+      const { data: pendenteExistente } = await supabase
+        .from('acessos_pendentes')
+        .select('is_assinante, is_aluno_particular')
+        .eq('email', email)
+        .maybeSingle();
+
+      await supabase.from('acessos_pendentes').upsert({
+        email,
+        is_assinante: assinanteConvite || pendenteExistente?.is_assinante || false,
+        is_aluno_particular: particularConvite || pendenteExistente?.is_aluno_particular || false,
+        atualizado_em: new Date().toISOString(),
+      });
+      setMensagemConvite(`Acesso reservado para ${email} — quando essa pessoa criar a conta com esse e-mail em /login, o acesso é liberado na hora.`);
+      carregarPendentes();
+    }
+
+    setEmailConvite('');
+  }
+
+  async function cancelarPendente(email: string) {
+    await supabase.from('acessos_pendentes').delete().eq('email', email);
+    carregarPendentes();
   }
 
   async function alternarFlag(aluno: Aluno, campo: 'is_assinante' | 'is_aluno_particular') {
@@ -81,6 +140,54 @@ export default function AdminAlunos() {
       <Cabecalho ehAdmin />
       <div className="envolucro">
         <h1 style={{ fontSize: 20, fontWeight: 500 }}>Alunos</h1>
+
+        <div className="painel">
+          <p className="painel-titulo">Liberar acesso por e-mail</p>
+          <p className="painel-legenda">
+            Digite o e-mail da pessoa e marque o tipo de acesso. Se ela ainda não tem conta, o acesso fica
+            reservado — assim que criar a conta em <code>/login</code> com esse mesmo e-mail, é liberado
+            automaticamente. Se já tiver conta, é liberado na hora.
+          </p>
+          <form onSubmit={liberarAcessoPorEmail}>
+            <input
+              className="campo"
+              type="email"
+              placeholder="e-mail@exemplo.com"
+              value={emailConvite}
+              onChange={(e) => setEmailConvite(e.target.value)}
+              required
+            />
+            <label style={{ fontSize: 13, marginRight: 16 }}>
+              <input type="checkbox" checked={assinanteConvite} onChange={(e) => setAssinanteConvite(e.target.checked)} /> assinante
+            </label>
+            <label style={{ fontSize: 13 }}>
+              <input type="checkbox" checked={particularConvite} onChange={(e) => setParticularConvite(e.target.checked)} /> aluno particular
+            </label>
+            <div style={{ marginTop: 12 }}>
+              <button className="botao" type="submit">Liberar acesso</button>
+            </div>
+          </form>
+          {mensagemConvite && <p className="painel-legenda" style={{ marginTop: 12, marginBottom: 0 }}>{mensagemConvite}</p>}
+
+          {pendentes.length > 0 && (
+            <div style={{ marginTop: 20, borderTop: '1px solid var(--borda)', paddingTop: 16 }}>
+              <p className="rotulo">Aguardando cadastro</p>
+              {pendentes.map((p) => (
+                <div className="aula-linha" key={p.email}>
+                  <div>
+                    <div className="aula-titulo">{p.email}</div>
+                    <p className="painel-legenda" style={{ margin: 0 }}>
+                      {[p.is_assinante && 'assinante', p.is_aluno_particular && 'aluno particular'].filter(Boolean).join(' · ')}
+                    </p>
+                  </div>
+                  <button className="botao fantasma" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => cancelarPendente(p.email)}>
+                    cancelar
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         {alunos.map((aluno) => (
           <div className="painel" key={aluno.id}>

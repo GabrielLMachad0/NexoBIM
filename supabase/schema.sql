@@ -149,9 +149,9 @@ create table aulas_particulares_gravadas (
 -- =====================================================================
 -- 5. Row Level Security — a parte que garante "só ele acessa a aula dele"
 -- =====================================================================
--- Sem nenhuma "policy" criada para essa tabela: com RLS ligado e zero policies,
--- nem o próprio usuário logado consegue ler ou escrever aqui — só a service role
--- (usada pelos webhooks no servidor) tem passe livre, que é exatamente o que queremos.
+-- Só a service role (webhooks) e a admin (painel /admin/alunos, pra liberar
+-- acesso por e-mail antes da pessoa se cadastrar) têm passe livre aqui —
+-- a policy de admin fica declarada mais abaixo, depois de is_admin() existir.
 alter table acessos_pendentes enable row level security;
 
 alter table profiles enable row level security;
@@ -172,6 +172,9 @@ create function is_admin()
 returns boolean as $$
   select coalesce((select is_admin from profiles where id = auth.uid()), false);
 $$ language sql security definer stable set search_path = public;
+
+-- acessos pendentes: só a admin gerencia (liberar acesso por e-mail antes do cadastro)
+create policy "admin gerencia acessos pendentes" on acessos_pendentes for all using (is_admin()) with check (is_admin());
 
 -- perfis: cada um vê e edita o próprio; admin vê todos
 create policy "ver proprio perfil" on profiles for select using (id = auth.uid() or is_admin());
