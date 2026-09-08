@@ -14,7 +14,7 @@ export default function Cabecalho({ ehAdmin }: { ehAdmin?: boolean }) {
   return (
     <header className="topo">
       <a className="marca" href="/">
-        Nexo<span>BIM</span>
+        <img src="/logo-nexobim-topo.png" alt="NexoBIM" />
       </a>
       <nav>
         <a href="/dashboard">Meu painel</a>

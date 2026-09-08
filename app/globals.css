@@ -1,14 +1,14 @@
 :root {
-  --azul-projeto: #12293f;
-  --azul-linha: #3f7c93;
-  --azul-linha-clara: #dce9ed;
-  --fundo: #f3f4f1;
-  --painel: #ffffff;
-  --texto: #17222c;
-  --texto-suave: #5b6672;
-  --selo: #a8631a;
-  --selo-clara: #f3e4d3;
-  --borda: #cdd3d1;
+  --azul-projeto: #1a1a1c;
+  --azul-linha: #05e0e0;
+  --azul-linha-clara: rgba(5, 224, 224, 0.14);
+  --fundo: #242426;
+  --painel: #2f2f32;
+  --texto: #f2f2f2;
+  --texto-suave: #a3a3a8;
+  --selo: #e2a83c;
+  --selo-clara: rgba(226, 168, 60, 0.14);
+  --borda: #3d3d41;
   --risco: 8px;
 }
 
@@ -43,15 +43,14 @@ a {
 }
 
 .topo .marca {
-  font-size: 19px;
-  font-weight: 500;
-  letter-spacing: 0.2px;
+  display: flex;
+  align-items: center;
   text-decoration: none;
-  color: #eef3f5;
 }
 
-.topo .marca span {
-  color: #9cc3cf;
+.topo .marca img {
+  height: 22px;
+  display: block;
 }
 
 .topo nav a {
@@ -166,32 +165,38 @@ button.aula-linha:first-of-type {
 
 .botao {
   display: inline-block;
-  background: var(--azul-projeto);
-  color: #eef3f5;
+  background: var(--azul-linha);
+  color: #0d2121;
   border: none;
   border-radius: 3px;
   padding: 10px 18px;
   font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
   text-decoration: none;
 }
 
 .botao:hover {
-  background: #0b1c2c;
+  background: #3ceded;
 }
 
 .botao.selo {
   background: var(--selo);
+  color: #2b1a04;
 }
 
 .botao.selo:hover {
-  background: #8a4f15;
+  background: #eab654;
 }
 
 .botao.fantasma {
   background: transparent;
-  color: var(--azul-projeto);
-  border: 1px solid var(--azul-projeto);
+  color: var(--azul-linha);
+  border: 1px solid var(--azul-linha);
+}
+
+.botao.fantasma:hover {
+  background: var(--azul-linha-clara);
 }
 
 .campo {
@@ -199,9 +204,15 @@ button.aula-linha:first-of-type {
   padding: 10px 12px;
   border: 1px solid var(--borda);
   border-radius: 3px;
+  background: var(--fundo);
+  color: var(--texto);
   font-size: 14px;
   margin-bottom: 12px;
   font-family: inherit;
+}
+
+.campo::placeholder {
+  color: var(--texto-suave);
 }
 
 .rotulo {
@@ -212,7 +223,7 @@ button.aula-linha:first-of-type {
 }
 
 .erro {
-  color: #a3342f;
+  color: #ff6b6b;
   font-size: 13px;
   margin-top: -6px;
   margin-bottom: 12px;
@@ -221,7 +232,7 @@ button.aula-linha:first-of-type {
 .selo-certificado {
   border: 1px solid var(--selo);
   background: var(--selo-clara);
-  color: #6b3d10;
+  color: #f0c674;
   border-radius: 4px;
   padding: 16px;
   font-size: 14px;
@@ -316,8 +327,19 @@ button.aula-linha:first-of-type {
   padding: 32px 24px 64px;
   display: flex;
   justify-content: space-between;
+  align-items: center;
   font-size: 13px;
   color: var(--texto-suave);
+}
+
+.rodape-marca {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rodape-marca img {
+  height: 16px;
 }
 
 @media (max-width: 640px) {
