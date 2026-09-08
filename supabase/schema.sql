@@ -113,6 +113,7 @@ create table certificados (
   aluno_id uuid not null references profiles(id) on delete cascade,
   nivel_id uuid not null references niveis(id) on delete cascade,
   emitido_em timestamptz not null default now(),
+  codigo text unique, -- código curto gerado no app (10 caracteres), usado em /certificado/[codigo]
   unique (aluno_id, nivel_id)
 );
 
@@ -207,6 +208,26 @@ create policy "certificados do proprio aluno" on certificados for select
   using (aluno_id = auth.uid() or is_admin());
 create policy "certificados inseridos pelo proprio aluno" on certificados for insert
   with check (aluno_id = auth.uid());
+
+-- Consulta pública de certificado por código (usada em /certificado/[codigo]):
+-- devolve só o necessário pra confirmar validade (nome, nível, curso, data),
+-- nunca e-mail ou outro dado pessoal. Chamável sem login (RPC exposta de propósito).
+create function verificar_certificado(p_codigo text)
+returns table (nome_aluno text, nivel text, curso text, emitido_em timestamptz)
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select p.nome, n.nome, c.nome, cert.emitido_em
+  from certificados cert
+  join profiles p on p.id = cert.aluno_id
+  join niveis n on n.id = cert.nivel_id
+  join cursos c on c.id = n.curso_id
+  where cert.codigo = p_codigo;
+$$;
+
+grant execute on function verificar_certificado(text) to anon, authenticated;
 
 -- conteúdo personalizado: só o aluno dono lê; só admin escreve
 create policy "ler proprio plano personalizado" on planos_personalizados for select

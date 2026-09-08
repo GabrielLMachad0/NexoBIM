@@ -28,6 +28,7 @@ export default function NivelPage() {
   const [assistidas, setAssistidas] = useState<Set<string>>(new Set());
   const [tarefasFeitas, setTarefasFeitas] = useState<Set<string>>(new Set());
   const [certificadoEmitido, setCertificadoEmitido] = useState(false);
+  const [codigoCertificado, setCodigoCertificado] = useState<string | null>(null);
   const [aulaSelecionada, setAulaSelecionada] = useState<Aula | null>(null);
 
   useEffect(() => {
@@ -89,11 +90,12 @@ export default function NivelPage() {
 
     const { data: cert } = await supabase
       .from('certificados')
-      .select('id')
+      .select('codigo')
       .eq('aluno_id', userId)
       .eq('nivel_id', params.id)
       .maybeSingle();
     setCertificadoEmitido(!!cert);
+    setCodigoCertificado(cert?.codigo ?? null);
 
     setCarregando(false);
   }
@@ -117,10 +119,15 @@ export default function NivelPage() {
     const { data: sessao } = await supabase.auth.getSession();
     const userId = sessao.session!.user.id;
 
+    let codigo = codigoCertificado;
     if (!certificadoEmitido) {
-      await supabase.from('certificados').insert({ aluno_id: userId, nivel_id: nivel.id });
+      codigo = crypto.randomUUID().replace(/-/g, '').slice(0, 10).toUpperCase();
+      await supabase.from('certificados').insert({ aluno_id: userId, nivel_id: nivel.id, codigo });
       setCertificadoEmitido(true);
+      setCodigoCertificado(codigo);
     }
+
+    const urlVerificacao = `${window.location.origin}/certificado/${codigo}`;
 
     const { jsPDF } = await import('jspdf');
     const doc = new jsPDF({ orientation: 'landscape' });
@@ -131,6 +138,8 @@ export default function NivelPage() {
     doc.setFontSize(12);
     doc.text(`concluiu o nível "${nivel.nome}" do curso "${nivel.cursos.nome}"`, 148, 105, { align: 'center' });
     doc.text(new Date().toLocaleDateString('pt-BR'), 148, 120, { align: 'center' });
+    doc.setFontSize(10);
+    doc.text(`Verifique em ${urlVerificacao}`, 148, 150, { align: 'center' });
     doc.save(`certificado-${nivel.nome}.pdf`);
   }
 
@@ -219,7 +228,15 @@ export default function NivelPage() {
         {completo && (
           <div style={{ marginTop: 16 }}>
             {certificadoEmitido ? (
-              <div className="selo-certificado">Certificado emitido para este nível.</div>
+              <div className="selo-certificado">
+                Certificado emitido para este nível.
+                <br />
+                Código de verificação: <strong>{codigoCertificado}</strong> —{' '}
+                <a href={`/certificado/${codigoCertificado}`} target="_blank" rel="noreferrer">ver validação</a>
+                <div style={{ marginTop: 12 }}>
+                  <button className="botao fantasma" onClick={gerarCertificado}>Baixar PDF novamente</button>
+                </div>
+              </div>
             ) : (
               <button className="botao selo" onClick={gerarCertificado}>Gerar certificado</button>
             )}
