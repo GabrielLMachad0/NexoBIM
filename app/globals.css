@@ -122,6 +122,7 @@ button.aula-linha {
   background: none;
   border: none;
   border-top: 1px solid var(--borda);
+  color: var(--texto);
   font-family: inherit;
   text-align: left;
   cursor: pointer;
@@ -142,6 +143,7 @@ button.aula-linha:first-of-type {
 
 .aula-titulo {
   font-size: 14px;
+  color: var(--texto);
 }
 
 .aula-titulo a {
