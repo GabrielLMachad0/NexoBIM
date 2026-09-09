@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { supabase } from '../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 
@@ -14,7 +15,7 @@ export default function Cabecalho({ ehAdmin }: { ehAdmin?: boolean }) {
   return (
     <header className="topo">
       <a className="marca" href="/">
-        <img src="/logo-nexobim-topo.png" alt="NexoBIM" />
+        <Image src="/logo-nexobim-topo.png" alt="NexoBIM" width={241} height={66} priority />
       </a>
       <nav>
         <a href="/dashboard">Meu painel</a>

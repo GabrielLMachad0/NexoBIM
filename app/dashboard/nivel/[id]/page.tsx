@@ -58,11 +58,16 @@ export default function NivelPage() {
     }
     const userId = sessao.session.user.id;
 
-    const { data: perfilData } = await supabase
-      .from('profiles')
-      .select('nome, is_assinante, is_admin')
-      .eq('id', userId)
-      .single();
+    // Perfil, nível e certificado não dependem um do outro — buscam em paralelo.
+    const [{ data: perfilData }, { data: nivelData }, { data: cert }] = await Promise.all([
+      supabase.from('profiles').select('nome, is_assinante, is_admin').eq('id', userId).single(),
+      supabase
+        .from('niveis')
+        .select('id, nome, ordem, curso_id, cursos(nome), aulas(id, titulo, descricao, youtube_id, ordem), tarefas_padrao(id, titulo, descricao)')
+        .eq('id', params.id)
+        .single(),
+      supabase.from('certificados').select('codigo').eq('aluno_id', userId).eq('nivel_id', params.id).maybeSingle(),
+    ]);
 
     if (!perfilData?.is_assinante) {
       router.push('/dashboard');
@@ -71,46 +76,35 @@ export default function NivelPage() {
     setEhAdmin(!!perfilData.is_admin);
     setNomeAluno(perfilData.nome);
 
-    const { data: nivelData } = await supabase
-      .from('niveis')
-      .select('id, nome, ordem, curso_id, cursos(nome), aulas(id, titulo, descricao, youtube_id, ordem), tarefas_padrao(id, titulo, descricao)')
-      .eq('id', params.id)
-      .single();
-
     if (!nivelData) {
       router.push('/dashboard');
       return;
     }
     setNivel(nivelData as any);
-
-    const aulaIds = ((nivelData as any).aulas as Aula[]).map((a) => a.id);
-    if (aulaIds.length > 0) {
-      const { data: progAulas } = await supabase
-        .from('progresso_aulas')
-        .select('aula_id')
-        .eq('aluno_id', userId)
-        .in('aula_id', aulaIds);
-      setAssistidas(new Set((progAulas || []).map((p: any) => p.aula_id)));
-    }
-
-    const tarefaIds = ((nivelData as any).tarefas_padrao as TarefaPadrao[]).map((t) => t.id);
-    if (tarefaIds.length > 0) {
-      const { data: progTarefas } = await supabase
-        .from('progresso_tarefas')
-        .select('tarefa_padrao_id')
-        .eq('aluno_id', userId)
-        .in('tarefa_padrao_id', tarefaIds);
-      setTarefasFeitas(new Set((progTarefas || []).map((p: any) => p.tarefa_padrao_id)));
-    }
-
-    const { data: cert } = await supabase
-      .from('certificados')
-      .select('codigo')
-      .eq('aluno_id', userId)
-      .eq('nivel_id', params.id)
-      .maybeSingle();
     setCertificadoEmitido(!!cert);
     setCodigoCertificado(cert?.codigo ?? null);
+
+    const aulaIds = ((nivelData as any).aulas as Aula[]).map((a) => a.id);
+    const tarefaIds = ((nivelData as any).tarefas_padrao as TarefaPadrao[]).map((t) => t.id);
+
+    await Promise.all([
+      aulaIds.length > 0
+        ? supabase
+            .from('progresso_aulas')
+            .select('aula_id')
+            .eq('aluno_id', userId)
+            .in('aula_id', aulaIds)
+            .then(({ data }) => setAssistidas(new Set((data || []).map((p: any) => p.aula_id))))
+        : Promise.resolve(),
+      tarefaIds.length > 0
+        ? supabase
+            .from('progresso_tarefas')
+            .select('tarefa_padrao_id')
+            .eq('aluno_id', userId)
+            .in('tarefa_padrao_id', tarefaIds)
+            .then(({ data }) => setTarefasFeitas(new Set((data || []).map((p: any) => p.tarefa_padrao_id))))
+        : Promise.resolve(),
+    ]);
 
     setCarregando(false);
   }

@@ -60,62 +60,67 @@ export default function Dashboard() {
       .single();
     setPerfil(perfilData as any);
 
+    // Cada consulta abaixo é independente das outras — dispara todas de uma vez
+    // em vez de esperar uma terminar pra começar a próxima.
+    const tarefas: PromiseLike<void>[] = [];
+
     if (perfilData?.is_assinante) {
-      const { data: cursosData } = await supabase
-        .from('cursos')
-        .select('id, nome, niveis(id, nome, ordem, aulas(id, titulo, youtube_id, ordem), tarefas_padrao(id, titulo, descricao))')
-        .order('ordem');
-      setCursos((cursosData as any) || []);
-
-      const { data: progAulas } = await supabase.from('progresso_aulas').select('aula_id').eq('aluno_id', userId);
-      setAssistidas(new Set((progAulas || []).map((p: any) => p.aula_id)));
-
-      const { data: progTarefas } = await supabase.from('progresso_tarefas').select('tarefa_padrao_id').eq('aluno_id', userId);
-      setTarefasFeitas(new Set((progTarefas || []).map((p: any) => p.tarefa_padrao_id)));
-
-      const { data: certs } = await supabase.from('certificados').select('nivel_id').eq('aluno_id', userId);
-      setCertificados(new Set((certs || []).map((c: any) => c.nivel_id)));
-
-      const { data: ultimaAula } = await supabase
-        .from('progresso_aulas')
-        .select('assistido_em, aulas(titulo, niveis(id, nome, cursos(nome)))')
-        .eq('aluno_id', userId)
-        .order('assistido_em', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      const aula = (ultimaAula as any)?.aulas;
-      if (aula?.niveis) {
-        setContinuarEm({
-          nivelId: aula.niveis.id,
-          nivelNome: aula.niveis.nome,
-          cursoNome: aula.niveis.cursos.nome,
-          aulaTitulo: aula.titulo,
-        });
-      }
+      tarefas.push(
+        supabase
+          .from('cursos')
+          .select('id, nome, niveis(id, nome, ordem, aulas(id, titulo, youtube_id, ordem), tarefas_padrao(id, titulo, descricao))')
+          .order('ordem')
+          .then(({ data }) => setCursos((data as any) || [])),
+        supabase.from('progresso_aulas').select('aula_id').eq('aluno_id', userId)
+          .then(({ data }) => setAssistidas(new Set((data || []).map((p: any) => p.aula_id)))),
+        supabase.from('progresso_tarefas').select('tarefa_padrao_id').eq('aluno_id', userId)
+          .then(({ data }) => setTarefasFeitas(new Set((data || []).map((p: any) => p.tarefa_padrao_id)))),
+        supabase.from('certificados').select('nivel_id').eq('aluno_id', userId)
+          .then(({ data }) => setCertificados(new Set((data || []).map((c: any) => c.nivel_id)))),
+        supabase
+          .from('progresso_aulas')
+          .select('assistido_em, aulas(titulo, niveis(id, nome, cursos(nome)))')
+          .eq('aluno_id', userId)
+          .order('assistido_em', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+          .then(({ data }) => {
+            const aula = (data as any)?.aulas;
+            if (aula?.niveis) {
+              setContinuarEm({
+                nivelId: aula.niveis.id,
+                nivelNome: aula.niveis.nome,
+                cursoNome: aula.niveis.cursos.nome,
+                aulaTitulo: aula.titulo,
+              });
+            }
+          }),
+      );
     }
 
     if (perfilData?.is_aluno_particular) {
-      const { data: planosData } = await supabase
-        .from('planos_personalizados')
-        .select('id, motivo, conteudo, criado_em')
-        .eq('aluno_id', userId)
-        .order('criado_em', { ascending: false });
-      setPlanos((planosData as any) || []);
-
-      const { data: tarefasData } = await supabase
-        .from('tarefas_designadas')
-        .select('id, titulo, descricao, status, prazo')
-        .eq('aluno_id', userId);
-      setTarefasDesignadas((tarefasData as any) || []);
-
-      const { data: gravadasData } = await supabase
-        .from('aulas_particulares_gravadas')
-        .select('id, titulo, video_url, data_aula')
-        .eq('aluno_id', userId)
-        .order('data_aula', { ascending: false });
-      setAulasGravadas((gravadasData as any) || []);
+      tarefas.push(
+        supabase
+          .from('planos_personalizados')
+          .select('id, motivo, conteudo, criado_em')
+          .eq('aluno_id', userId)
+          .order('criado_em', { ascending: false })
+          .then(({ data }) => setPlanos((data as any) || [])),
+        supabase
+          .from('tarefas_designadas')
+          .select('id, titulo, descricao, status, prazo')
+          .eq('aluno_id', userId)
+          .then(({ data }) => setTarefasDesignadas((data as any) || [])),
+        supabase
+          .from('aulas_particulares_gravadas')
+          .select('id, titulo, video_url, data_aula')
+          .eq('aluno_id', userId)
+          .order('data_aula', { ascending: false })
+          .then(({ data }) => setAulasGravadas((data as any) || [])),
+      );
     }
 
+    await Promise.all(tarefas);
     setCarregando(false);
   }
 

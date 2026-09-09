@@ -1,3 +1,5 @@
+import Image from 'next/image';
+
 const YOUTUBE_URL = 'https://youtube.com/@nexobim3550';
 
 const CURSOS = [
@@ -36,7 +38,7 @@ export default function Inicio() {
     <div>
       <header className="topo">
         <a className="marca" href="/">
-          <img src="/logo-nexobim-topo.png" alt="NexoBIM" />
+          <Image src="/logo-nexobim-topo.png" alt="NexoBIM" width={241} height={66} priority />
         </a>
         <nav>
           <a href="#cursos">Cursos</a>
@@ -131,7 +133,7 @@ export default function Inicio() {
 
       <footer className="rodape-nexobim">
         <span className="rodape-marca">
-          <img src="/simbolo-nexobim-ciano.png" alt="" />
+          <Image src="/simbolo-nexobim-ciano.png" alt="" width={54} height={48} />
           NexoBIM
         </span>
         <a href={YOUTUBE_URL} target="_blank" rel="noreferrer">YouTube</a>

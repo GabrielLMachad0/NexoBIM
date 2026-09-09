@@ -42,21 +42,21 @@ export default function AdminMetricas() {
   }
 
   async function carregar() {
-    const { data: alunos } = await supabase.from('profiles').select('is_admin, is_assinante, is_aluno_particular').eq('is_admin', false);
+    // As quatro consultas abaixo não dependem uma da outra — buscam em paralelo.
+    const [{ data: alunos }, { data: certs }, { data: cursosData }, { data: progAulas }] = await Promise.all([
+      supabase.from('profiles').select('is_admin, is_assinante, is_aluno_particular').eq('is_admin', false),
+      supabase.from('certificados').select('nivel_id'),
+      supabase.from('cursos').select('id, nome, niveis(id, nome, aulas(id, titulo), tarefas_padrao(id))').order('ordem'),
+      supabase.from('progresso_aulas').select('aula_id'),
+    ]);
+
     setTotalAlunos((alunos || []).length);
     setAssinantes((alunos || []).filter((a: any) => a.is_assinante).length);
     setParticulares((alunos || []).filter((a: any) => a.is_aluno_particular).length);
-
-    const { data: certs } = await supabase.from('certificados').select('nivel_id');
     setCertificadosEmitidos((certs || []).length);
 
-    const { data: cursosData } = await supabase
-      .from('cursos')
-      .select('id, nome, niveis(id, nome, aulas(id, titulo), tarefas_padrao(id))')
-      .order('ordem');
     const cursos = (cursosData as any as Curso[]) || [];
 
-    const { data: progAulas } = await supabase.from('progresso_aulas').select('aula_id');
     const contagemPorAula = new Map<string, number>();
     for (const p of progAulas || []) {
       contagemPorAula.set(p.aula_id, (contagemPorAula.get(p.aula_id) || 0) + 1);

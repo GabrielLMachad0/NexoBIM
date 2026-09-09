@@ -1,13 +1,22 @@
 import { createClient } from '@supabase/supabase-js';
 import { notFound } from 'next/navigation';
+import Image from 'next/image';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key';
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+// Regera a página em segundo plano no máximo a cada 5 min, servindo do cache no meio tempo.
+export const revalidate = 300;
+
 type Aula = { id: string; titulo: string; ordem: number };
 type Nivel = { id: string; nome: string; ordem: number; aulas: Aula[] };
 type Curso = { nome: string; slug: string; niveis: Nivel[] };
+
+export async function generateStaticParams() {
+  const { data } = await supabase.from('cursos').select('slug');
+  return (data || []).map((c: any) => ({ slug: c.slug }));
+}
 
 async function buscarCurso(slug: string): Promise<Curso | null> {
   const { data } = await supabase
@@ -38,7 +47,7 @@ export default async function PaginaCurso({ params }: { params: { slug: string }
     <div>
       <header className="topo">
         <a className="marca" href="/">
-          <img src="/logo-nexobim-topo.png" alt="NexoBIM" />
+          <Image src="/logo-nexobim-topo.png" alt="NexoBIM" width={241} height={66} priority />
         </a>
         <nav>
           <a href="/#cursos">Cursos</a>
@@ -87,7 +96,7 @@ export default async function PaginaCurso({ params }: { params: { slug: string }
 
       <footer className="rodape-nexobim">
         <span className="rodape-marca">
-          <img src="/simbolo-nexobim-ciano.png" alt="" />
+          <Image src="/simbolo-nexobim-ciano.png" alt="" width={54} height={48} />
           NexoBIM
         </span>
         <a href="/">voltar pra home</a>

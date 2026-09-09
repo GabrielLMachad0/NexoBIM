@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import Image from 'next/image';
 import { supabase } from '../../../lib/supabaseClient';
 
 type Resultado = { nome_aluno: string; nivel: string; curso: string; emitido_em: string };
@@ -25,7 +26,7 @@ export default function VerificarCertificado() {
     <div>
       <header className="topo">
         <a className="marca" href="/">
-          <img src="/logo-nexobim-topo.png" alt="NexoBIM" />
+          <Image src="/logo-nexobim-topo.png" alt="NexoBIM" width={241} height={66} priority />
         </a>
       </header>
 
