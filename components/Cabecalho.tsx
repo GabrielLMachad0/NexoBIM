@@ -19,6 +19,7 @@ export default function Cabecalho({ ehAdmin }: { ehAdmin?: boolean }) {
       </a>
       <nav>
         <a href="/dashboard">Meu painel</a>
+        <a href="/recursos">Recursos</a>
         {ehAdmin && <a href="/admin">Administração</a>}
         <a href="#" onClick={(e) => { e.preventDefault(); sair(); }}>Sair</a>
       </nav>

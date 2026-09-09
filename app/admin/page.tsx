@@ -97,6 +97,12 @@ export default function AdminHome() {
         </div>
 
         <div className="painel">
+          <p className="painel-titulo">Acervo de recursos</p>
+          <p className="painel-legenda">Famílias e projetos de Revit disponíveis para download.</p>
+          <a className="botao" href="/admin/recursos">Gerenciar acervo</a>
+        </div>
+
+        <div className="painel">
           <p className="painel-titulo">Novo curso</p>
           <form onSubmit={criarCurso}>
             <input className="campo" placeholder="Nome do curso (ex.: Revit)" value={novoCurso} onChange={(e) => setNovoCurso(e.target.value)} />

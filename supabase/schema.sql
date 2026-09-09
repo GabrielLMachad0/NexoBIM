@@ -249,4 +249,32 @@ create policy "admin cria tarefas designadas" on tarefas_designadas for insert w
 -- só pode ser lida por quem é o dono (aluno_id = auth.uid()) ou pela admin
 create policy "so o dono ve a propria aula gravada" on aulas_particulares_gravadas for select
   using (aluno_id = auth.uid() or is_admin());
+
+-- ---------------------------------------------------------------------
+-- 8. Acervo de recursos para download (famílias e projetos de Revit,
+-- hospedados no Google Drive; aqui só ficam os links + metadados)
+-- ---------------------------------------------------------------------
+create table recursos_download (
+  id uuid primary key default gen_random_uuid(),
+  categoria text not null,
+  nome text not null,
+  descricao text,
+  link_drive text not null,
+  ordem int not null default 0,
+  criado_em timestamptz not null default now()
+);
+
+alter table recursos_download enable row level security;
+
+-- Qualquer usuário autenticado (com conta na plataforma) pode ver o acervo.
+create policy "recursos_download_select_autenticado" on recursos_download for select
+  to authenticated using (true);
+
+-- Só admin pode gerenciar o acervo.
+create policy "recursos_download_admin_insert" on recursos_download for insert
+  to authenticated with check (is_admin());
+create policy "recursos_download_admin_update" on recursos_download for update
+  to authenticated using (is_admin()) with check (is_admin());
+create policy "recursos_download_admin_delete" on recursos_download for delete
+  to authenticated using (is_admin());
 create policy "admin adiciona aula gravada" on aulas_particulares_gravadas for insert with check (is_admin());
