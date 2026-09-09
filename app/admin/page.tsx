@@ -7,6 +7,14 @@ import Cabecalho from '../../components/Cabecalho';
 
 type Curso = { id: string; nome: string };
 
+function slugificar(texto: string): string {
+  return texto
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
 export default function AdminHome() {
   const router = useRouter();
   const [carregando, setCarregando] = useState(true);
@@ -44,7 +52,7 @@ export default function AdminHome() {
   async function criarCurso(e: React.FormEvent) {
     e.preventDefault();
     if (!novoCurso) return;
-    await supabase.from('cursos').insert({ nome: novoCurso, ordem: cursos.length });
+    await supabase.from('cursos').insert({ nome: novoCurso, slug: slugificar(novoCurso), ordem: cursos.length });
     setNovoCurso('');
     setMensagem('Curso criado.');
     carregarCursos();
@@ -74,6 +82,12 @@ export default function AdminHome() {
           <p className="painel-titulo">Conteúdo</p>
           <p className="painel-legenda">Cursos, níveis e vídeo aulas.</p>
           <a className="botao" href="/admin/aulas">Gerenciar aulas</a>
+        </div>
+
+        <div className="painel">
+          <p className="painel-titulo">Métricas</p>
+          <p className="painel-legenda">Alunos ativos, progresso por nível e aula mais assistida.</p>
+          <a className="botao" href="/admin/metricas">Ver métricas</a>
         </div>
 
         <div className="painel">

@@ -3,24 +3,28 @@ const YOUTUBE_URL = 'https://youtube.com/@nexobim3550';
 const CURSOS = [
   {
     sigla: 'BIM',
+    slug: null,
     nome: 'Fundamentos de BIM',
     niveis: 'Fundamentos · Intermediário · Avançado',
     detalhe: 'A metodologia BIM na prática: fluxo colaborativo, compatibilização e organização do projeto.',
   },
   {
     sigla: 'REVIT',
+    slug: 'revit-architecture',
     nome: 'Revit Architecture',
     niveis: 'Fundamentos · Intermediário · Avançado',
     detalhe: 'Modelagem arquitetônica, documentação técnica e detalhamento executivo em Revit.',
   },
   {
     sigla: 'MEP',
+    slug: 'revit-mep',
     nome: 'Revit MEP',
     niveis: 'Fundamentos · Intermediário · Avançado',
     detalhe: 'Coordenação de instalações hidrossanitárias e climatização dentro do modelo BIM.',
   },
   {
     sigla: 'MD',
+    slug: 'microdesk-para-revit',
     nome: 'MicroDesk para Revit',
     niveis: 'Primeiros passos',
     detalhe: 'Instalação e comandos do MicroDesk, plugin que acelera a modelagem no Revit.',
@@ -60,14 +64,23 @@ export default function Inicio() {
         <h2 className="titulo-secao">Cursos disponíveis</h2>
         <p className="legenda-secao">Cada curso é dividido em níveis, com aulas, tarefas e certificado próprio.</p>
         <div className="grade-cursos">
-          {CURSOS.map((curso) => (
-            <article className="painel cartao-curso" key={curso.sigla}>
-              <span className="codigo-nivel">{curso.sigla}</span>
-              <p className="painel-titulo">{curso.nome}</p>
-              <p className="painel-legenda">{curso.niveis}</p>
-              <p className="cartao-curso-texto">{curso.detalhe}</p>
-            </article>
-          ))}
+          {CURSOS.map((curso) => {
+            const conteudo = (
+              <>
+                <span className="codigo-nivel">{curso.sigla}</span>
+                <p className="painel-titulo">{curso.nome}</p>
+                <p className="painel-legenda">{curso.niveis}</p>
+                <p className="cartao-curso-texto">{curso.detalhe}</p>
+              </>
+            );
+            return curso.slug ? (
+              <a className="painel cartao-curso cartao-curso-link" href={`/cursos/${curso.slug}`} key={curso.sigla}>
+                {conteudo}
+              </a>
+            ) : (
+              <article className="painel cartao-curso" key={curso.sigla}>{conteudo}</article>
+            );
+          })}
         </div>
       </section>
 

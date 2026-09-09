@@ -144,6 +144,8 @@ export default function NivelPage() {
 
     const urlVerificacao = `${window.location.origin}/certificado/${codigo}`;
     const logo = await imagemComoDataUrl('/logo-nexobim-preto.png');
+    const QRCode = (await import('qrcode')).default;
+    const qrCode = await QRCode.toDataURL(urlVerificacao, { margin: 1, width: 200 });
 
     const { jsPDF } = await import('jspdf');
     const doc = new jsPDF({ orientation: 'landscape' });
@@ -167,6 +169,13 @@ export default function NivelPage() {
       const logoAltura = logoLargura / (2490 / 1004);
       doc.addImage(logo, 'PNG', meio - logoLargura / 2, 24, logoLargura, logoAltura);
     }
+
+    const qrTamanho = 24;
+    doc.addImage(qrCode, 'PNG', largura - 20 - qrTamanho - 4, 20, qrTamanho, qrTamanho);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(CINZA);
+    doc.text('escaneie para validar', largura - 20 - qrTamanho / 2 - 4, 20 + qrTamanho + 4, { align: 'center' });
 
     doc.setTextColor(CARVAO);
     doc.setFont('helvetica', 'bold');

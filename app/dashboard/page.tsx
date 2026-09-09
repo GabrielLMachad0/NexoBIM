@@ -39,6 +39,7 @@ export default function Dashboard() {
   const [planos, setPlanos] = useState<PlanoPersonalizado[]>([]);
   const [tarefasDesignadas, setTarefasDesignadas] = useState<TarefaDesignada[]>([]);
   const [aulasGravadas, setAulasGravadas] = useState<AulaGravada[]>([]);
+  const [continuarEm, setContinuarEm] = useState<{ nivelId: string; nivelNome: string; cursoNome: string; aulaTitulo: string } | null>(null);
 
   useEffect(() => {
     carregar();
@@ -74,6 +75,23 @@ export default function Dashboard() {
 
       const { data: certs } = await supabase.from('certificados').select('nivel_id').eq('aluno_id', userId);
       setCertificados(new Set((certs || []).map((c: any) => c.nivel_id)));
+
+      const { data: ultimaAula } = await supabase
+        .from('progresso_aulas')
+        .select('assistido_em, aulas(titulo, niveis(id, nome, cursos(nome)))')
+        .eq('aluno_id', userId)
+        .order('assistido_em', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const aula = (ultimaAula as any)?.aulas;
+      if (aula?.niveis) {
+        setContinuarEm({
+          nivelId: aula.niveis.id,
+          nivelNome: aula.niveis.nome,
+          cursoNome: aula.niveis.cursos.nome,
+          aulaTitulo: aula.titulo,
+        });
+      }
     }
 
     if (perfilData?.is_aluno_particular) {
@@ -156,6 +174,14 @@ export default function Dashboard() {
 
         {perfil.is_assinante && (
           <>
+            {continuarEm && (
+              <Link href={`/dashboard/nivel/${continuarEm.nivelId}`} className="painel continuar-card" style={{ marginTop: 28 }}>
+                <span className="etiqueta-nivel">Continuar de onde parei</span>
+                <p className="painel-titulo">{continuarEm.aulaTitulo}</p>
+                <p className="painel-legenda" style={{ margin: 0 }}>{continuarEm.cursoNome} · {continuarEm.nivelNome}</p>
+              </Link>
+            )}
+
             <h2 style={{ fontSize: 15, fontWeight: 500, color: 'var(--texto-suave)', marginTop: 28 }}>Seus cursos</h2>
 
             <div className="grade-niveis">

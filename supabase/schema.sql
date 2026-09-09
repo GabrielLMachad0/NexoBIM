@@ -59,6 +59,7 @@ create trigger on_auth_user_created
 create table cursos (
   id uuid primary key default gen_random_uuid(),
   nome text not null,
+  slug text not null unique, -- usado em /cursos/[slug], a página pública do curso
   ordem int not null default 0
 );
 
@@ -181,14 +182,17 @@ create policy "admin gerencia acessos pendentes" on acessos_pendentes for all us
 create policy "ver proprio perfil" on profiles for select using (id = auth.uid() or is_admin());
 create policy "editar proprio perfil" on profiles for update using (id = auth.uid() or is_admin());
 
--- conteúdo padrão: qualquer usuário autenticado lê; só admin escreve
-create policy "ler cursos" on cursos for select using (auth.role() = 'authenticated');
+-- conteúdo padrão: o catálogo (curso/nível/título da aula) é público de propósito —
+-- vira a página /cursos/[slug] pra atrair gente pelo Google, igual a um índice de
+-- programa de curso. O vídeo em si (assistir, marcar progresso, certificado) continua
+-- exigindo login. Só admin escreve.
+create policy "catalogo publico de cursos" on cursos for select using (true);
 create policy "admin escreve cursos" on cursos for all using (is_admin());
 
-create policy "ler niveis" on niveis for select using (auth.role() = 'authenticated');
+create policy "catalogo publico de niveis" on niveis for select using (true);
 create policy "admin escreve niveis" on niveis for all using (is_admin());
 
-create policy "ler aulas" on aulas for select using (auth.role() = 'authenticated');
+create policy "catalogo publico de aulas" on aulas for select using (true);
 create policy "admin escreve aulas" on aulas for all using (is_admin());
 
 create policy "ler planos padrao" on planos_padrao for select using (auth.role() = 'authenticated');
