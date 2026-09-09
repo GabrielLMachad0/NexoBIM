@@ -5,7 +5,18 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 import Cabecalho from '../../components/Cabecalho';
 
-type Recurso = { id: string; categoria: string; nome: string; descricao: string | null; link_drive: string; arquivos: number };
+type Recurso = { id: string; categoria: string; nome: string; descricao: string | null; link_drive: string; arquivos: number; cliques: number };
+
+function idDoDrive(linkDrive: string): string | null {
+  const match = linkDrive.match(/id=([^&]+)/);
+  return match ? match[1] : null;
+}
+
+function thumbnailDoRecurso(recurso: Recurso): string | null {
+  if (!/\.(png|jpe?g)$/i.test(recurso.nome)) return null;
+  const id = idDoDrive(recurso.link_drive);
+  return id ? `https://drive.google.com/thumbnail?id=${id}&sz=w300` : null;
+}
 
 function normalizar(texto: string): string {
   return texto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -54,12 +65,16 @@ export default function Recursos() {
 
     const [{ data: perfilData }, { data: recursosData }] = await Promise.all([
       supabase.from('profiles').select('is_admin').eq('id', sessao.session.user.id).single(),
-      supabase.from('recursos_download').select('id, categoria, nome, descricao, link_drive, arquivos').order('categoria').order('ordem'),
+      supabase.from('recursos_download').select('id, categoria, nome, descricao, link_drive, arquivos, cliques').order('categoria').order('ordem'),
     ]);
 
     setEhAdmin(!!perfilData?.is_admin);
     setRecursos((recursosData as any) || []);
     setCarregando(false);
+  }
+
+  function registrarClique(recursoId: string) {
+    supabase.rpc('incrementar_clique_recurso', { p_recurso_id: recursoId });
   }
 
   const buscaNormalizada = normalizar(busca.trim());
@@ -72,6 +87,7 @@ export default function Recursos() {
     );
   }, [recursos, buscaNormalizada]);
 
+  const maisBaixados = [...recursos].sort((a, b) => b.cliques - a.cliques).filter((r) => r.cliques > 0).slice(0, 6);
   const categorias = Array.from(new Set(recursos.map((r) => r.categoria)));
   const categoriasComResultado = Array.from(new Set(recursosFiltrados.map((r) => r.categoria)));
 
@@ -116,6 +132,28 @@ export default function Recursos() {
           </div>
         )}
 
+        {!busca && maisBaixados.length > 0 && (
+          <div>
+            <p className="painel-legenda titulo-categoria-recurso">🔥 Mais baixados</p>
+            <div className="grade-niveis">
+              {maisBaixados.map((recurso) => (
+                <a
+                  key={recurso.id}
+                  className="painel cartao-nivel cartao-recurso"
+                  href={recurso.link_drive}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={() => registrarClique(recurso.id)}
+                >
+                  <p className="painel-titulo">{recurso.nome}</p>
+                  <p className="painel-legenda" style={{ margin: 0 }}>{recurso.categoria}</p>
+                  <span className="link-baixar-recurso">Abrir no Drive ↗</span>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
         {busca && categoriasComResultado.length === 0 && (
           <div className="painel" style={{ marginTop: 20 }}>
             <p className="painel-legenda" style={{ margin: 0 }}>Nenhum resultado para "{busca}".</p>
@@ -130,13 +168,27 @@ export default function Recursos() {
                 {iconeDaCategoria(categoria)} {categoria} <span className="contagem-categoria">({itens.length})</span>
               </p>
               <div className="grade-niveis">
-                {itens.map((recurso) => (
-                  <a key={recurso.id} className="painel cartao-nivel cartao-recurso" href={recurso.link_drive} target="_blank" rel="noreferrer">
-                    <p className="painel-titulo">{recurso.nome}</p>
-                    {recurso.descricao && <p className="painel-legenda" style={{ margin: 0 }}>{recurso.descricao}</p>}
-                    <span className="link-baixar-recurso">Abrir no Drive ↗</span>
-                  </a>
-                ))}
+                {itens.map((recurso) => {
+                  const thumbnail = thumbnailDoRecurso(recurso);
+                  return (
+                    <a
+                      key={recurso.id}
+                      className="painel cartao-nivel cartao-recurso"
+                      href={recurso.link_drive}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={() => registrarClique(recurso.id)}
+                    >
+                      {thumbnail && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={thumbnail} alt="" className="thumbnail-recurso" loading="lazy" />
+                      )}
+                      <p className="painel-titulo">{recurso.nome}</p>
+                      {recurso.descricao && <p className="painel-legenda" style={{ margin: 0 }}>{recurso.descricao}</p>}
+                      <span className="link-baixar-recurso">Abrir no Drive ↗</span>
+                    </a>
+                  );
+                })}
               </div>
             </div>
           );

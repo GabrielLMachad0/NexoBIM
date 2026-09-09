@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../lib/supabaseClient';
 import Cabecalho from '../../components/Cabecalho';
+import AnelProgresso from '../../components/AnelProgresso';
 
 type Aula = { id: string; titulo: string; youtube_id: string; ordem: number };
 type TarefaPadrao = { id: string; titulo: string; descricao: string };
@@ -200,10 +201,17 @@ export default function Dashboard() {
                       nivel.tarefas_padrao.filter((t) => tarefasFeitas.has(t.id)).length;
                     const completo = totalItens > 0 && feitos === totalItens;
 
+                    const percentual = totalItens > 0 ? (feitos / totalItens) * 100 : 0;
+
                     return (
-                      <Link href={`/dashboard/nivel/${nivel.id}`} className="painel cartao-nivel" key={nivel.id}>
-                        <span className="etiqueta-nivel">{nivel.nome}</span>
-                        <p className="painel-titulo">{curso.nome}</p>
+                      <Link href={`/dashboard/nivel/${nivel.id}`} className="painel cartao-nivel cartao-nivel-com-anel" key={nivel.id}>
+                        <div className="cartao-nivel-topo">
+                          <div>
+                            <span className="etiqueta-nivel">{nivel.nome}</span>
+                            <p className="painel-titulo">{curso.nome}</p>
+                          </div>
+                          <AnelProgresso percentual={percentual} />
+                        </div>
                         <p className="painel-legenda">{nivel.aulas.length} aula{nivel.aulas.length === 1 ? '' : 's'}</p>
                         {completo ? (
                           <span className="marcador feito">

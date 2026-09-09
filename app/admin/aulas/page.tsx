@@ -6,7 +6,7 @@ import { supabase } from '../../../lib/supabaseClient';
 import Cabecalho from '../../../components/Cabecalho';
 
 type Aula = { id: string; titulo: string; youtube_id: string; ordem: number; descricao: string };
-type TarefaPadrao = { id: string; titulo: string };
+type TarefaPadrao = { id: string; titulo: string; descricao: string };
 type Nivel = { id: string; nome: string; curso_id: string; aulas: Aula[]; tarefas_padrao: TarefaPadrao[] };
 type Curso = { id: string; nome: string; niveis: Nivel[] };
 
@@ -28,6 +28,15 @@ export default function AdminAulas() {
   const [descricaoTarefa, setDescricaoTarefa] = useState('');
   const [mensagem, setMensagem] = useState('');
 
+  const [aulaEditandoId, setAulaEditandoId] = useState<string | null>(null);
+  const [edTitulo, setEdTitulo] = useState('');
+  const [edLink, setEdLink] = useState('');
+  const [edDescricao, setEdDescricao] = useState('');
+
+  const [tarefaEditandoId, setTarefaEditandoId] = useState<string | null>(null);
+  const [edTituloTarefa, setEdTituloTarefa] = useState('');
+  const [edDescricaoTarefa, setEdDescricaoTarefa] = useState('');
+
   useEffect(() => {
     guardaEcarrega();
   }, []);
@@ -44,7 +53,7 @@ export default function AdminAulas() {
   async function carregar() {
     const { data } = await supabase
       .from('cursos')
-      .select('id, nome, niveis(id, nome, curso_id, aulas(id, titulo, descricao, youtube_id, ordem), tarefas_padrao(id, titulo))')
+      .select('id, nome, niveis(id, nome, curso_id, aulas(id, titulo, descricao, youtube_id, ordem), tarefas_padrao(id, titulo, descricao))')
       .order('ordem');
     setCursos((data as any) || []);
   }
@@ -78,6 +87,57 @@ export default function AdminAulas() {
     setTituloTarefa('');
     setDescricaoTarefa('');
     setMensagem('Tarefa adicionada.');
+    carregar();
+  }
+
+  function iniciarEdicaoAula(a: Aula) {
+    setAulaEditandoId(a.id);
+    setEdTitulo(a.titulo);
+    setEdLink(a.youtube_id);
+    setEdDescricao(a.descricao || '');
+  }
+
+  async function salvarAula(id: string) {
+    await supabase.from('aulas').update({
+      titulo: edTitulo,
+      descricao: edDescricao,
+      youtube_id: extrairYoutubeId(edLink),
+    }).eq('id', id);
+    setAulaEditandoId(null);
+    carregar();
+  }
+
+  async function removerAula(id: string) {
+    await supabase.from('aulas').delete().eq('id', id);
+    carregar();
+  }
+
+  async function moverAula(nivel: Nivel, aula: Aula, direcao: -1 | 1) {
+    const ordenadas = [...nivel.aulas].sort((a, b) => a.ordem - b.ordem);
+    const indice = ordenadas.findIndex((a) => a.id === aula.id);
+    const vizinho = ordenadas[indice + direcao];
+    if (!vizinho) return;
+    await Promise.all([
+      supabase.from('aulas').update({ ordem: vizinho.ordem }).eq('id', aula.id),
+      supabase.from('aulas').update({ ordem: aula.ordem }).eq('id', vizinho.id),
+    ]);
+    carregar();
+  }
+
+  function iniciarEdicaoTarefa(t: TarefaPadrao) {
+    setTarefaEditandoId(t.id);
+    setEdTituloTarefa(t.titulo);
+    setEdDescricaoTarefa(t.descricao || '');
+  }
+
+  async function salvarTarefa(id: string) {
+    await supabase.from('tarefas_padrao').update({ titulo: edTituloTarefa, descricao: edDescricaoTarefa }).eq('id', id);
+    setTarefaEditandoId(null);
+    carregar();
+  }
+
+  async function removerTarefa(id: string) {
+    await supabase.from('tarefas_padrao').delete().eq('id', id);
     carregar();
   }
 
@@ -124,18 +184,51 @@ export default function AdminAulas() {
             {curso.niveis.map((nivel) => (
               <div key={nivel.id} style={{ marginTop: 12 }}>
                 <p style={{ fontSize: 14, fontWeight: 500, margin: '8px 0 4px' }}>{nivel.nome}</p>
-                {nivel.aulas.map((a) => (
-                  <div className="aula-linha" key={a.id}>
-                    <span className="aula-titulo">{a.titulo}</span>
-                    <span className="marcador">{a.youtube_id}</span>
-                  </div>
-                ))}
-                {nivel.tarefas_padrao.map((t) => (
-                  <div className="aula-linha" key={t.id}>
-                    <span className="aula-titulo">{t.titulo}</span>
-                    <span className="marcador">tarefa</span>
-                  </div>
-                ))}
+                {[...nivel.aulas].sort((a, b) => a.ordem - b.ordem).map((a, indice) =>
+                  aulaEditandoId === a.id ? (
+                    <div className="aula-linha" key={a.id} style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
+                      <input className="campo" value={edTitulo} onChange={(e) => setEdTitulo(e.target.value)} placeholder="Título" />
+                      <input className="campo" value={edLink} onChange={(e) => setEdLink(e.target.value)} placeholder="Link/ID do YouTube" />
+                      <input className="campo" value={edDescricao} onChange={(e) => setEdDescricao(e.target.value)} placeholder="Descrição" />
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button className="botao" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => salvarAula(a.id)}>Salvar</button>
+                        <button className="botao fantasma" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => setAulaEditandoId(null)}>Cancelar</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="aula-linha" key={a.id}>
+                      <span className="aula-titulo">{a.titulo}</span>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <span className="marcador">{a.youtube_id}</span>
+                        <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} disabled={indice === 0} onClick={() => moverAula(nivel, a, -1)}>↑</button>
+                        <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} disabled={indice === nivel.aulas.length - 1} onClick={() => moverAula(nivel, a, 1)}>↓</button>
+                        <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => iniciarEdicaoAula(a)}>editar</button>
+                        <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => removerAula(a.id)}>remover</button>
+                      </div>
+                    </div>
+                  )
+                )}
+                {nivel.tarefas_padrao.map((t) =>
+                  tarefaEditandoId === t.id ? (
+                    <div className="aula-linha" key={t.id} style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
+                      <input className="campo" value={edTituloTarefa} onChange={(e) => setEdTituloTarefa(e.target.value)} placeholder="Título" />
+                      <input className="campo" value={edDescricaoTarefa} onChange={(e) => setEdDescricaoTarefa(e.target.value)} placeholder="Descrição" />
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button className="botao" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => salvarTarefa(t.id)}>Salvar</button>
+                        <button className="botao fantasma" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => setTarefaEditandoId(null)}>Cancelar</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="aula-linha" key={t.id}>
+                      <span className="aula-titulo">{t.titulo}</span>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <span className="marcador">tarefa</span>
+                        <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => iniciarEdicaoTarefa(t)}>editar</button>
+                        <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => removerTarefa(t.id)}>remover</button>
+                      </div>
+                    </div>
+                  )
+                )}
               </div>
             ))}
           </div>

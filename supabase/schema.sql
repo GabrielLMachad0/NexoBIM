@@ -262,6 +262,7 @@ create table recursos_download (
   link_drive text not null,
   ordem int not null default 0,
   arquivos int not null default 1,
+  cliques int not null default 0,
   criado_em timestamptz not null default now()
 );
 
@@ -278,4 +279,19 @@ create policy "recursos_download_admin_update" on recursos_download for update
   to authenticated using (is_admin()) with check (is_admin());
 create policy "recursos_download_admin_delete" on recursos_download for delete
   to authenticated using (is_admin());
+
+-- Incrementa o contador de cliques sem exigir que o aluno tenha permissão
+-- de update na tabela inteira (só essa coluna, via função).
+create or replace function incrementar_clique_recurso(p_recurso_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update recursos_download set cliques = cliques + 1 where id = p_recurso_id;
+end;
+$$;
+
+grant execute on function incrementar_clique_recurso(uuid) to authenticated;
 create policy "admin adiciona aula gravada" on aulas_particulares_gravadas for insert with check (is_admin());
