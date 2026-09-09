@@ -50,7 +50,7 @@ export default async function PaginaCurso({ params }: { params: { slug: string }
         <span className="etiqueta">Curso NexoBIM</span>
         <h1>{curso.nome}</h1>
         <p className="hero-legenda">
-          {totalAulas} aula{totalAulas === 1 ? '' : 's'} organizada{totalAulas === 1 ? '' : 's'} em {niveis.length} nível{niveis.length === 1 ? '' : 'eis'},
+          {totalAulas} aula{totalAulas === 1 ? '' : 's'} organizada{totalAulas === 1 ? '' : 's'} em {niveis.length} {niveis.length === 1 ? 'nível' : 'níveis'},
           com tarefas práticas e certificado ao concluir cada etapa.
         </p>
         <div className="hero-botoes">

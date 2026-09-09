@@ -2,24 +2,24 @@ const YOUTUBE_URL = 'https://youtube.com/@nexobim3550';
 
 const CURSOS = [
   {
-    sigla: 'BIM',
-    slug: null,
-    nome: 'Fundamentos de BIM',
-    niveis: 'Fundamentos · Intermediário · Avançado',
-    detalhe: 'A metodologia BIM na prática: fluxo colaborativo, compatibilização e organização do projeto.',
+    sigla: 'BÁSICO',
+    slug: 'revit-basico',
+    nome: 'Revit Básico',
+    niveis: 'Interface e Primeiros Passos',
+    detalhe: 'Minicurso gratuito: interface, paredes, esquadrias, piso, telhado e forro — o ponto de partida no Revit.',
   },
   {
     sigla: 'REVIT',
     slug: 'revit-architecture',
     nome: 'Revit Architecture',
-    niveis: 'Fundamentos · Intermediário · Avançado',
+    niveis: 'Fluxo de Trabalho · Elementos Construtivos',
     detalhe: 'Modelagem arquitetônica, documentação técnica e detalhamento executivo em Revit.',
   },
   {
     sigla: 'MEP',
     slug: 'revit-mep',
     nome: 'Revit MEP',
-    niveis: 'Fundamentos · Intermediário · Avançado',
+    niveis: 'Instalações Hidrossanitárias e Climatização',
     detalhe: 'Coordenação de instalações hidrossanitárias e climatização dentro do modelo BIM.',
   },
   {
