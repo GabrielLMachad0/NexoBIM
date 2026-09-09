@@ -261,6 +261,7 @@ create table recursos_download (
   descricao text,
   link_drive text not null,
   ordem int not null default 0,
+  arquivos int not null default 1,
   criado_em timestamptz not null default now()
 );
 

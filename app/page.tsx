@@ -86,6 +86,19 @@ export default function Inicio() {
         </div>
       </section>
 
+      <section className="envolucro-largo secao-bonus">
+        <div className="painel painel-bonus">
+          <span className="etiqueta">Bônus incluso na assinatura</span>
+          <p className="painel-titulo" style={{ fontSize: 20 }}>
+            Acesso a mais de <span className="numero-bonus">2.000 arquivos</span> de famílias e projetos de Revit
+          </p>
+          <p className="cartao-curso-texto">
+            Portas, janelas, portões, estrutura, hidrossanitário, elétrica, mobiliário urbano e muito mais —
+            prontos para baixar e usar direto nos seus próprios projetos.
+          </p>
+        </div>
+      </section>
+
       <section className="envolucro-largo">
         <h2 className="titulo-secao">Como funciona</h2>
         <div className="grade-passos">

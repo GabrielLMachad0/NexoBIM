@@ -512,3 +512,17 @@ button.aula-linha:first-of-type {
   font-weight: 500;
   color: var(--azul-linha);
 }
+
+.secao-bonus {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.painel-bonus {
+  text-align: center;
+  border-color: var(--azul-linha);
+}
+
+.numero-bonus {
+  color: var(--azul-linha);
+}

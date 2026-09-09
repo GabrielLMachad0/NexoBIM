@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 import Cabecalho from '../../components/Cabecalho';
 
-type Recurso = { id: string; categoria: string; nome: string; descricao: string | null; link_drive: string };
+type Recurso = { id: string; categoria: string; nome: string; descricao: string | null; link_drive: string; arquivos: number };
 
 function normalizar(texto: string): string {
   return texto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -21,11 +21,17 @@ function iconeDaCategoria(categoria: string): string {
   if (c.includes('biblioteca')) return '📚';
   if (c.includes('projeto')) return '📐';
   if (c.includes('template')) return '📄';
-  if (c.includes('veiculo') || c.includes('equipamento')) return '🚧';
+  if (c.includes('veiculo')) return '🚗';
+  if (c.includes('equipamento')) return '🚧';
+  if (c.includes('hidrossanit')) return '🚰';
   if (c.includes('pessoa') || c.includes('figura')) return '🧍';
   if (c.includes('textura') || c.includes('material')) return '🎨';
   if (c.includes('paisagismo') || c.includes('mobiliario')) return '🌳';
   return '📁';
+}
+
+function totalDeArquivos(recursos: Recurso[]): number {
+  return recursos.reduce((soma, r) => soma + r.arquivos, 0);
 }
 
 export default function Recursos() {
@@ -48,7 +54,7 @@ export default function Recursos() {
 
     const [{ data: perfilData }, { data: recursosData }] = await Promise.all([
       supabase.from('profiles').select('is_admin').eq('id', sessao.session.user.id).single(),
-      supabase.from('recursos_download').select('id, categoria, nome, descricao, link_drive').order('categoria').order('ordem'),
+      supabase.from('recursos_download').select('id, categoria, nome, descricao, link_drive, arquivos').order('categoria').order('ordem'),
     ]);
 
     setEhAdmin(!!perfilData?.is_admin);
@@ -81,7 +87,9 @@ export default function Recursos() {
       <div className="envolucro">
         <h1 style={{ fontSize: 20, fontWeight: 500 }}>Acervo de recursos</h1>
         <p className="painel-legenda">
-          Famílias e projetos de Revit para baixar e usar nos seus próprios modelos — {recursos.length} recursos em {categorias.length} categorias.
+          Famílias e projetos de Revit para baixar e usar nos seus próprios modelos — mais de{' '}
+          <strong style={{ color: 'var(--azul-linha)' }}>{totalDeArquivos(recursos).toLocaleString('pt-BR')} arquivos</strong>{' '}
+          em {categorias.length} categorias.
         </p>
 
         <input

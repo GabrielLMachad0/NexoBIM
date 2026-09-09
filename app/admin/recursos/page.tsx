@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
 import Cabecalho from '../../../components/Cabecalho';
 
-type Recurso = { id: string; categoria: string; nome: string; descricao: string | null; link_drive: string; ordem: number };
+type Recurso = { id: string; categoria: string; nome: string; descricao: string | null; link_drive: string; ordem: number; arquivos: number };
 
 export default function AdminRecursos() {
   const router = useRouter();
@@ -15,6 +15,7 @@ export default function AdminRecursos() {
   const [nome, setNome] = useState('');
   const [descricao, setDescricao] = useState('');
   const [linkDrive, setLinkDrive] = useState('');
+  const [arquivos, setArquivos] = useState('1');
   const [mensagem, setMensagem] = useState('');
 
   useEffect(() => {
@@ -33,18 +34,20 @@ export default function AdminRecursos() {
   }
 
   async function carregar() {
-    const { data } = await supabase.from('recursos_download').select('id, categoria, nome, descricao, link_drive, ordem').order('categoria').order('ordem');
+    const { data } = await supabase.from('recursos_download').select('id, categoria, nome, descricao, link_drive, ordem, arquivos').order('categoria').order('ordem');
     setRecursos((data as any) || []);
   }
 
   async function adicionar(e: React.FormEvent) {
     e.preventDefault();
     if (!categoria || !nome || !linkDrive) return;
+    const numArquivos = parseInt(arquivos, 10) || 1;
     const { error } = await supabase.from('recursos_download').insert({
       categoria,
       nome,
-      descricao: descricao || null,
+      descricao: descricao || `${numArquivos} arquivo${numArquivos === 1 ? '' : 's'}`,
       link_drive: linkDrive,
+      arquivos: numArquivos,
       ordem: recursos.filter((r) => r.categoria === categoria).length,
     });
     if (error) {
@@ -54,6 +57,7 @@ export default function AdminRecursos() {
     setNome('');
     setDescricao('');
     setLinkDrive('');
+    setArquivos('1');
     setMensagem('Recurso adicionado.');
     carregar();
   }
@@ -76,10 +80,15 @@ export default function AdminRecursos() {
           <p className="painel-titulo">Adicionar recurso</p>
           <form onSubmit={adicionar}>
             <label className="rotulo">Categoria (agrupa os cards na página do aluno)</label>
-            <input className="campo" placeholder="ex.: Famílias Revit" value={categoria} onChange={(e) => setCategoria(e.target.value)} />
+            <input className="campo" list="categorias-existentes" placeholder="ex.: Famílias Revit" value={categoria} onChange={(e) => setCategoria(e.target.value)} />
+            <datalist id="categorias-existentes">
+              {Array.from(new Set(recursos.map((r) => r.categoria))).map((c) => <option value={c} key={c} />)}
+            </datalist>
             <label className="rotulo">Nome</label>
             <input className="campo" placeholder="ex.: Bancadas" value={nome} onChange={(e) => setNome(e.target.value)} />
-            <label className="rotulo">Descrição (opcional)</label>
+            <label className="rotulo">Quantidade de arquivos dentro da pasta</label>
+            <input className="campo" type="number" min="1" value={arquivos} onChange={(e) => setArquivos(e.target.value)} />
+            <label className="rotulo">Descrição (opcional — se vazio, usa "N arquivos")</label>
             <input className="campo" placeholder="ex.: Mais de 140 famílias de bancadas" value={descricao} onChange={(e) => setDescricao(e.target.value)} />
             <label className="rotulo">Link do Google Drive (pasta ou arquivo, com acesso "qualquer um com o link")</label>
             <input className="campo" placeholder="https://drive.google.com/..." value={linkDrive} onChange={(e) => setLinkDrive(e.target.value)} />
@@ -88,7 +97,9 @@ export default function AdminRecursos() {
           {mensagem && <p className="painel-legenda">{mensagem}</p>}
         </div>
 
-        <p className="painel-legenda" style={{ marginTop: 24, marginBottom: 8 }}>Recursos cadastrados</p>
+        <p className="painel-legenda" style={{ marginTop: 24, marginBottom: 8 }}>
+          Recursos cadastrados — {recursos.length} itens, {recursos.reduce((s, r) => s + r.arquivos, 0)} arquivos no total
+        </p>
         <div className="painel">
           {recursos.map((r) => (
             <div className="aula-linha" key={r.id}>
