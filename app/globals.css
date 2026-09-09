@@ -126,6 +126,8 @@ a {
   font-size: 16px;
   font-weight: 500;
   margin: 0 0 4px;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .painel-legenda {
@@ -594,4 +596,15 @@ button.aula-linha:first-of-type {
 
 .numero-bonus {
   color: var(--azul-linha);
+}
+
+.cartao-categoria-recurso {
+  text-align: center;
+  padding: 28px 20px;
+}
+
+.icone-categoria-grande {
+  display: block;
+  font-size: 32px;
+  margin-bottom: 12px;
 }

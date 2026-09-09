@@ -2,48 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { supabase } from '../../lib/supabaseClient';
 import Cabecalho from '../../components/Cabecalho';
-
-type Recurso = { id: string; categoria: string; nome: string; descricao: string | null; link_drive: string; arquivos: number; cliques: number };
-
-function idDoDrive(linkDrive: string): string | null {
-  const match = linkDrive.match(/id=([^&]+)/);
-  return match ? match[1] : null;
-}
-
-function thumbnailDoRecurso(recurso: Recurso): string | null {
-  if (!/\.(png|jpe?g)$/i.test(recurso.nome)) return null;
-  const id = idDoDrive(recurso.link_drive);
-  return id ? `https://drive.google.com/thumbnail?id=${id}&sz=w300` : null;
-}
-
-function normalizar(texto: string): string {
-  return texto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-}
-
-function iconeDaCategoria(categoria: string): string {
-  const c = normalizar(categoria);
-  if (c.includes('esquadria') || c.includes('porta') || c.includes('janela')) return '🚪';
-  if (c.includes('portao') || c.includes('grade') || c.includes('cerca')) return '⛓️';
-  if (c.includes('estrutura') || c.includes('cobertura')) return '🏗️';
-  if (c.includes('eletrica') || c.includes('infraestrutura')) return '⚡';
-  if (c.includes('decorativ')) return '🏛️';
-  if (c.includes('biblioteca')) return '📚';
-  if (c.includes('projeto')) return '📐';
-  if (c.includes('template')) return '📄';
-  if (c.includes('veiculo')) return '🚗';
-  if (c.includes('equipamento')) return '🚧';
-  if (c.includes('hidrossanit')) return '🚰';
-  if (c.includes('pessoa') || c.includes('figura')) return '🧍';
-  if (c.includes('textura') || c.includes('material')) return '🎨';
-  if (c.includes('paisagismo') || c.includes('mobiliario')) return '🌳';
-  return '📁';
-}
-
-function totalDeArquivos(recursos: Recurso[]): number {
-  return recursos.reduce((soma, r) => soma + r.arquivos, 0);
-}
+import { Recurso, normalizar, slugCategoria, iconeDaCategoria, totalDeArquivos } from '../../lib/recursos';
 
 export default function Recursos() {
   const router = useRouter();
@@ -79,7 +41,7 @@ export default function Recursos() {
 
   const buscaNormalizada = normalizar(busca.trim());
   const recursosFiltrados = useMemo(() => {
-    if (!buscaNormalizada) return recursos;
+    if (!buscaNormalizada) return [];
     return recursos.filter((r) =>
       normalizar(r.nome).includes(buscaNormalizada) ||
       normalizar(r.categoria).includes(buscaNormalizada) ||
@@ -88,12 +50,15 @@ export default function Recursos() {
   }, [recursos, buscaNormalizada]);
 
   const maisBaixados = [...recursos].sort((a, b) => b.cliques - a.cliques).filter((r) => r.cliques > 0).slice(0, 6);
-  const categorias = Array.from(new Set(recursos.map((r) => r.categoria)));
-  const categoriasComResultado = Array.from(new Set(recursosFiltrados.map((r) => r.categoria)));
 
-  function slugCategoria(categoria: string): string {
-    return normalizar(categoria).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-  }
+  const categorias = useMemo(() => {
+    const grupos = new Map<string, { itens: number; arquivos: number }>();
+    for (const r of recursos) {
+      const atual = grupos.get(r.categoria) || { itens: 0, arquivos: 0 };
+      grupos.set(r.categoria, { itens: atual.itens + 1, arquivos: atual.arquivos + r.arquivos });
+    }
+    return Array.from(grupos.entries()).map(([nome, dados]) => ({ nome, ...dados }));
+  }, [recursos]);
 
   if (carregando) return <div className="envolucro">Carregando...</div>;
 
@@ -116,27 +81,14 @@ export default function Recursos() {
           onChange={(e) => setBusca(e.target.value)}
         />
 
-        {!busca && categorias.length > 1 && (
-          <div className="chips-categoria">
-            {categorias.map((categoria) => (
-              <a key={categoria} href={`#${slugCategoria(categoria)}`} className="chip-categoria">
-                {iconeDaCategoria(categoria)} {categoria}
-              </a>
-            ))}
-          </div>
-        )}
-
-        {categorias.length === 0 && (
-          <div className="painel" style={{ marginTop: 20 }}>
-            <p className="painel-legenda" style={{ margin: 0 }}>Nenhum recurso disponível ainda.</p>
-          </div>
-        )}
-
-        {!busca && maisBaixados.length > 0 && (
-          <div>
-            <p className="painel-legenda titulo-categoria-recurso">🔥 Mais baixados</p>
-            <div className="grade-niveis">
-              {maisBaixados.map((recurso) => (
+        {busca ? (
+          recursosFiltrados.length === 0 ? (
+            <div className="painel" style={{ marginTop: 20 }}>
+              <p className="painel-legenda" style={{ margin: 0 }}>Nenhum resultado para "{busca}".</p>
+            </div>
+          ) : (
+            <div className="grade-niveis" style={{ marginTop: 16 }}>
+              {recursosFiltrados.map((recurso) => (
                 <a
                   key={recurso.id}
                   className="painel cartao-nivel cartao-recurso"
@@ -151,26 +103,20 @@ export default function Recursos() {
                 </a>
               ))}
             </div>
-          </div>
-        )}
+          )
+        ) : (
+          <>
+            {categorias.length === 0 && (
+              <div className="painel" style={{ marginTop: 20 }}>
+                <p className="painel-legenda" style={{ margin: 0 }}>Nenhum recurso disponível ainda.</p>
+              </div>
+            )}
 
-        {busca && categoriasComResultado.length === 0 && (
-          <div className="painel" style={{ marginTop: 20 }}>
-            <p className="painel-legenda" style={{ margin: 0 }}>Nenhum resultado para "{busca}".</p>
-          </div>
-        )}
-
-        {(busca ? categoriasComResultado : categorias).map((categoria) => {
-          const itens = recursosFiltrados.filter((r) => r.categoria === categoria);
-          return (
-            <div key={categoria} id={slugCategoria(categoria)}>
-              <p className="painel-legenda titulo-categoria-recurso">
-                {iconeDaCategoria(categoria)} {categoria} <span className="contagem-categoria">({itens.length})</span>
-              </p>
-              <div className="grade-niveis">
-                {itens.map((recurso) => {
-                  const thumbnail = thumbnailDoRecurso(recurso);
-                  return (
+            {maisBaixados.length > 0 && (
+              <div>
+                <p className="painel-legenda titulo-categoria-recurso">🔥 Mais baixados</p>
+                <div className="grade-niveis">
+                  {maisBaixados.map((recurso) => (
                     <a
                       key={recurso.id}
                       className="painel cartao-nivel cartao-recurso"
@@ -179,20 +125,37 @@ export default function Recursos() {
                       rel="noreferrer"
                       onClick={() => registrarClique(recurso.id)}
                     >
-                      {thumbnail && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={thumbnail} alt="" className="thumbnail-recurso" loading="lazy" />
-                      )}
                       <p className="painel-titulo">{recurso.nome}</p>
-                      {recurso.descricao && <p className="painel-legenda" style={{ margin: 0 }}>{recurso.descricao}</p>}
+                      <p className="painel-legenda" style={{ margin: 0 }}>{recurso.categoria}</p>
                       <span className="link-baixar-recurso">Abrir no Drive ↗</span>
                     </a>
-                  );
-                })}
+                  ))}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            )}
+
+            {categorias.length > 0 && (
+              <div>
+                <p className="painel-legenda titulo-categoria-recurso">Categorias</p>
+                <div className="grade-niveis">
+                  {categorias.map((categoria) => (
+                    <Link
+                      key={categoria.nome}
+                      href={`/recursos/${slugCategoria(categoria.nome)}`}
+                      className="painel cartao-nivel cartao-categoria-recurso"
+                    >
+                      <span className="icone-categoria-grande">{iconeDaCategoria(categoria.nome)}</span>
+                      <p className="painel-titulo">{categoria.nome}</p>
+                      <p className="painel-legenda" style={{ margin: 0 }}>
+                        {categoria.itens} pasta{categoria.itens === 1 ? '' : 's'} · {categoria.arquivos.toLocaleString('pt-BR')} arquivo{categoria.arquivos === 1 ? '' : 's'}
+                      </p>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
