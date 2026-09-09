@@ -20,8 +20,8 @@ export function iconeDaCategoria(categoria: string): string {
   const c = normalizar(categoria);
   if (c.includes('esquadria') || c.includes('porta') || c.includes('janela')) return '🚪';
   if (c.includes('portao') || c.includes('grade') || c.includes('cerca')) return '⛓️';
-  if (c.includes('estrutura') || c.includes('cobertura')) return '🏗️';
   if (c.includes('eletrica') || c.includes('infraestrutura')) return '⚡';
+  if (c.includes('estrutura') || c.includes('cobertura')) return '🏗️';
   if (c.includes('decorativ')) return '🏛️';
   if (c.includes('biblioteca')) return '📚';
   if (c.includes('projeto')) return '📐';
