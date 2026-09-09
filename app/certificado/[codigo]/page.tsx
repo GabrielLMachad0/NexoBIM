@@ -26,7 +26,7 @@ export default function VerificarCertificado() {
     <div>
       <header className="topo">
         <a className="marca" href="/">
-          <Image src="/logo-nexobim-topo.png" alt="NexoBIM" width={241} height={66} priority />
+          <Image src="/logo-nexobim-topo.png" alt="NexoBIM" width={80} height={22} priority />
         </a>
       </header>
 

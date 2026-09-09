@@ -38,7 +38,7 @@ export default function Inicio() {
     <div>
       <header className="topo">
         <a className="marca" href="/">
-          <Image src="/logo-nexobim-topo.png" alt="NexoBIM" width={241} height={66} priority />
+          <Image src="/logo-nexobim-topo.png" alt="NexoBIM" width={80} height={22} priority />
         </a>
         <nav>
           <a href="#cursos">Cursos</a>
@@ -133,7 +133,7 @@ export default function Inicio() {
 
       <footer className="rodape-nexobim">
         <span className="rodape-marca">
-          <Image src="/simbolo-nexobim-ciano.png" alt="" width={54} height={48} />
+          <Image src="/simbolo-nexobim-ciano.png" alt="" width={18} height={16} />
           NexoBIM
         </span>
         <a href={YOUTUBE_URL} target="_blank" rel="noreferrer">YouTube</a>
