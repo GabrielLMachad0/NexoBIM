@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../lib/supabaseClient';
 import Cabecalho from '../../components/Cabecalho';
-import { Recurso, normalizar, slugCategoria, iconeDaCategoria, totalDeArquivos } from '../../lib/recursos';
+import { Recurso, normalizar, slugCategoria, iconeDaCategoria, totalDeArquivos, thumbnailDoRecurso } from '../../lib/recursos';
 
 export default function Recursos() {
   const router = useRouter();
@@ -88,20 +88,27 @@ export default function Recursos() {
             </div>
           ) : (
             <div className="grade-niveis" style={{ marginTop: 16 }}>
-              {recursosFiltrados.map((recurso) => (
-                <a
-                  key={recurso.id}
-                  className="painel cartao-nivel cartao-recurso"
-                  href={recurso.link_drive}
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={() => registrarClique(recurso.id)}
-                >
-                  <p className="painel-titulo">{recurso.nome}</p>
-                  <p className="painel-legenda" style={{ margin: 0 }}>{recurso.categoria}</p>
-                  <span className="link-baixar-recurso">Abrir no Drive ↗</span>
-                </a>
-              ))}
+              {recursosFiltrados.map((recurso) => {
+                const thumbnail = thumbnailDoRecurso(recurso);
+                return (
+                  <a
+                    key={recurso.id}
+                    className="painel cartao-nivel cartao-recurso"
+                    href={recurso.link_drive}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={() => registrarClique(recurso.id)}
+                  >
+                    {thumbnail && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={thumbnail} alt="" className="thumbnail-recurso" loading="lazy" />
+                    )}
+                    <p className="painel-titulo">{recurso.nome}</p>
+                    <p className="painel-legenda" style={{ margin: 0 }}>{recurso.categoria}</p>
+                    <span className="link-baixar-recurso">Abrir no Drive ↗</span>
+                  </a>
+                );
+              })}
             </div>
           )
         ) : (
@@ -116,20 +123,27 @@ export default function Recursos() {
               <div>
                 <p className="painel-legenda titulo-categoria-recurso">🔥 Mais baixados</p>
                 <div className="grade-niveis">
-                  {maisBaixados.map((recurso) => (
-                    <a
-                      key={recurso.id}
-                      className="painel cartao-nivel cartao-recurso"
-                      href={recurso.link_drive}
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={() => registrarClique(recurso.id)}
-                    >
-                      <p className="painel-titulo">{recurso.nome}</p>
-                      <p className="painel-legenda" style={{ margin: 0 }}>{recurso.categoria}</p>
-                      <span className="link-baixar-recurso">Abrir no Drive ↗</span>
-                    </a>
-                  ))}
+                  {maisBaixados.map((recurso) => {
+                    const thumbnail = thumbnailDoRecurso(recurso);
+                    return (
+                      <a
+                        key={recurso.id}
+                        className="painel cartao-nivel cartao-recurso"
+                        href={recurso.link_drive}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={() => registrarClique(recurso.id)}
+                      >
+                        {thumbnail && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={thumbnail} alt="" className="thumbnail-recurso" loading="lazy" />
+                        )}
+                        <p className="painel-titulo">{recurso.nome}</p>
+                        <p className="painel-legenda" style={{ margin: 0 }}>{recurso.categoria}</p>
+                        <span className="link-baixar-recurso">Abrir no Drive ↗</span>
+                      </a>
+                    );
+                  })}
                 </div>
               </div>
             )}

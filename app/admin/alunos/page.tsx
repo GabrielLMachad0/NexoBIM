@@ -7,6 +7,9 @@ import Cabecalho from '../../../components/Cabecalho';
 
 type Aluno = { id: string; nome: string; is_assinante: boolean; is_aluno_particular: boolean };
 type AcessoPendente = { email: string; is_assinante: boolean; is_aluno_particular: boolean; atualizado_em: string };
+type Plano = { id: string; motivo: string; conteudo: string };
+type TarefaDesignada = { id: string; titulo: string; descricao: string; status: string; prazo: string | null };
+type Gravacao = { id: string; titulo: string; video_url: string; data_aula: string };
 
 export default function AdminAlunos() {
   const router = useRouter();
@@ -28,6 +31,10 @@ export default function AdminAlunos() {
   const [tituloGravacao, setTituloGravacao] = useState('');
   const [linkGravacao, setLinkGravacao] = useState('');
   const [mensagem, setMensagem] = useState('');
+
+  const [planosDoAluno, setPlanosDoAluno] = useState<Plano[]>([]);
+  const [tarefasDoAluno, setTarefasDoAluno] = useState<TarefaDesignada[]>([]);
+  const [gravacoesDoAluno, setGravacoesDoAluno] = useState<Gravacao[]>([]);
 
   useEffect(() => {
     guardaEcarrega();
@@ -108,11 +115,32 @@ export default function AdminAlunos() {
     carregar();
   }
 
+  async function carregarConteudoDoAluno(alunoId: string) {
+    const [{ data: planos }, { data: tarefas }, { data: gravacoes }] = await Promise.all([
+      supabase.from('planos_personalizados').select('id, motivo, conteudo').eq('aluno_id', alunoId).order('criado_em', { ascending: false }),
+      supabase.from('tarefas_designadas').select('id, titulo, descricao, status, prazo').eq('aluno_id', alunoId),
+      supabase.from('aulas_particulares_gravadas').select('id, titulo, video_url, data_aula').eq('aluno_id', alunoId).order('data_aula', { ascending: false }),
+    ]);
+    setPlanosDoAluno((planos as any) || []);
+    setTarefasDoAluno((tarefas as any) || []);
+    setGravacoesDoAluno((gravacoes as any) || []);
+  }
+
+  async function alternarExpandido(alunoId: string) {
+    if (expandido === alunoId) {
+      setExpandido(null);
+      return;
+    }
+    setExpandido(alunoId);
+    await carregarConteudoDoAluno(alunoId);
+  }
+
   async function salvarPlano(alunoId: string) {
     if (!motivo || !conteudoPlano) return;
     await supabase.from('planos_personalizados').insert({ aluno_id: alunoId, motivo, conteudo: conteudoPlano });
     setMotivo(''); setConteudoPlano('');
     setMensagem('Plano de aula adicionado.');
+    carregarConteudoDoAluno(alunoId);
   }
 
   async function salvarTarefa(alunoId: string) {
@@ -122,6 +150,7 @@ export default function AdminAlunos() {
     });
     setTituloTarefa(''); setDescricaoTarefa(''); setPrazoTarefa('');
     setMensagem('Tarefa designada.');
+    carregarConteudoDoAluno(alunoId);
   }
 
   async function salvarGravacao(alunoId: string) {
@@ -131,6 +160,25 @@ export default function AdminAlunos() {
     });
     setTituloGravacao(''); setLinkGravacao('');
     setMensagem('Gravação vinculada — só esse aluno vai conseguir ver.');
+    carregarConteudoDoAluno(alunoId);
+  }
+
+  async function removerPlano(id: string, alunoId: string) {
+    if (!window.confirm('Remover este plano de aula?')) return;
+    await supabase.from('planos_personalizados').delete().eq('id', id);
+    carregarConteudoDoAluno(alunoId);
+  }
+
+  async function removerTarefaDesignada(id: string, alunoId: string) {
+    if (!window.confirm('Remover esta tarefa?')) return;
+    await supabase.from('tarefas_designadas').delete().eq('id', id);
+    carregarConteudoDoAluno(alunoId);
+  }
+
+  async function removerGravacao(id: string, alunoId: string) {
+    if (!window.confirm('Remover esta gravação?')) return;
+    await supabase.from('aulas_particulares_gravadas').delete().eq('id', id);
+    carregarConteudoDoAluno(alunoId);
   }
 
   if (carregando) return <div className="envolucro">Carregando...</div>;
@@ -204,25 +252,70 @@ export default function AdminAlunos() {
               <button
                 className="botao fantasma"
                 style={{ fontSize: 12, padding: '4px 10px' }}
-                onClick={() => setExpandido(expandido === aluno.id ? null : aluno.id)}
+                onClick={() => alternarExpandido(aluno.id)}
               >
-                {expandido === aluno.id ? 'fechar' : 'adicionar conteúdo particular'}
+                {expandido === aluno.id ? 'fechar' : 'ver / adicionar conteúdo particular'}
               </button>
             </div>
 
             {expandido === aluno.id && (
               <div style={{ marginTop: 16, borderTop: '1px solid var(--borda)', paddingTop: 16 }}>
-                <label className="rotulo">Plano de aula personalizado</label>
+                {planosDoAluno.length > 0 && (
+                  <>
+                    <label className="rotulo">Planos já cadastrados</label>
+                    {planosDoAluno.map((p) => (
+                      <div className="aula-linha" key={p.id}>
+                        <div>
+                          <div className="aula-titulo">{p.motivo}</div>
+                          <p className="painel-legenda" style={{ margin: 0 }}>{p.conteudo}</p>
+                        </div>
+                        <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => removerPlano(p.id, aluno.id)}>remover</button>
+                      </div>
+                    ))}
+                  </>
+                )}
+                <label className="rotulo" style={{ marginTop: 16 }}>Plano de aula personalizado</label>
                 <input className="campo" placeholder="Motivo / dúvida da aula" value={motivo} onChange={(e) => setMotivo(e.target.value)} />
                 <textarea className="campo" placeholder="Conteúdo do plano" rows={3} value={conteudoPlano} onChange={(e) => setConteudoPlano(e.target.value)} />
                 <button className="botao fantasma" onClick={() => salvarPlano(aluno.id)}>Salvar plano</button>
 
+                {tarefasDoAluno.length > 0 && (
+                  <>
+                    <label className="rotulo" style={{ marginTop: 16 }}>Tarefas já designadas</label>
+                    {tarefasDoAluno.map((t) => (
+                      <div className="aula-linha" key={t.id}>
+                        <div>
+                          <div className="aula-titulo">{t.titulo}</div>
+                          <p className="painel-legenda" style={{ margin: 0 }}>{t.descricao} {t.prazo ? `· prazo ${new Date(t.prazo).toLocaleDateString('pt-BR')}` : ''}</p>
+                        </div>
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                          <span className={`marcador ${t.status === 'concluida' ? 'feito' : ''}`}>{t.status}</span>
+                          <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => removerTarefaDesignada(t.id, aluno.id)}>remover</button>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
                 <label className="rotulo" style={{ marginTop: 16 }}>Tarefa designada</label>
                 <input className="campo" placeholder="Título" value={tituloTarefa} onChange={(e) => setTituloTarefa(e.target.value)} />
                 <input className="campo" placeholder="Descrição" value={descricaoTarefa} onChange={(e) => setDescricaoTarefa(e.target.value)} />
                 <input className="campo" type="date" value={prazoTarefa} onChange={(e) => setPrazoTarefa(e.target.value)} />
                 <button className="botao fantasma" onClick={() => salvarTarefa(aluno.id)}>Designar tarefa</button>
 
+                {gravacoesDoAluno.length > 0 && (
+                  <>
+                    <label className="rotulo" style={{ marginTop: 16 }}>Gravações já vinculadas</label>
+                    {gravacoesDoAluno.map((g) => (
+                      <div className="aula-linha" key={g.id}>
+                        <div>
+                          <div className="aula-titulo">{g.titulo}</div>
+                          <p className="painel-legenda" style={{ margin: 0 }}>{new Date(g.data_aula).toLocaleDateString('pt-BR')}</p>
+                        </div>
+                        <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => removerGravacao(g.id, aluno.id)}>remover</button>
+                      </div>
+                    ))}
+                  </>
+                )}
                 <label className="rotulo" style={{ marginTop: 16 }}>Aula particular gravada (link do Teams)</label>
                 <input className="campo" placeholder="Título (ex.: Aula 12/09)" value={tituloGravacao} onChange={(e) => setTituloGravacao(e.target.value)} />
                 <input className="campo" placeholder="Link da gravação" value={linkGravacao} onChange={(e) => setLinkGravacao(e.target.value)} />

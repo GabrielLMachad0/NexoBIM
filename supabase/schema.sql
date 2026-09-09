@@ -250,6 +250,11 @@ create policy "admin cria tarefas designadas" on tarefas_designadas for insert w
 create policy "so o dono ve a propria aula gravada" on aulas_particulares_gravadas for select
   using (aluno_id = auth.uid() or is_admin());
 
+-- admin também pode remover conteúdo particular cadastrado por engano
+create policy "admin remove planos personalizados" on planos_personalizados for delete using (is_admin());
+create policy "admin remove tarefas designadas" on tarefas_designadas for delete using (is_admin());
+create policy "admin remove aula gravada" on aulas_particulares_gravadas for delete using (is_admin());
+
 -- ---------------------------------------------------------------------
 -- 8. Acervo de recursos para download (famílias e projetos de Revit,
 -- hospedados no Google Drive; aqui só ficam os links + metadados)
