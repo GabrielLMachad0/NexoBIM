@@ -464,3 +464,51 @@ button.aula-linha:first-of-type {
   min-height: 120px;
   text-align: center;
 }
+
+/* Acervo de recursos para download */
+
+.chips-categoria {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0 8px;
+}
+
+.chip-categoria {
+  font-size: 13px;
+  color: var(--texto);
+  background: var(--painel);
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+  padding: 6px 14px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.chip-categoria:hover {
+  border-color: var(--azul-linha);
+  color: var(--azul-linha);
+}
+
+.titulo-categoria-recurso {
+  margin-top: 28px;
+  margin-bottom: 8px;
+  scroll-margin-top: 16px;
+}
+
+.contagem-categoria {
+  color: var(--texto-suave);
+}
+
+.cartao-recurso {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.link-baixar-recurso {
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--azul-linha);
+}
