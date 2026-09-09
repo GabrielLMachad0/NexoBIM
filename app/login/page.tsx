@@ -6,7 +6,7 @@ import { supabase } from '../../lib/supabaseClient';
 
 export default function Login() {
   const router = useRouter();
-  const [modo, setModo] = useState<'entrar' | 'criar'>('entrar');
+  const [modo, setModo] = useState<'entrar' | 'criar' | 'esqueci'>('entrar');
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
@@ -16,6 +16,24 @@ export default function Login() {
   async function enviar(e: React.FormEvent) {
     e.preventDefault();
     setMensagem('');
+
+    if (modo === 'esqueci') {
+      if (!email) {
+        setMensagem('Preencha seu e-mail.');
+        return;
+      }
+      setCarregando(true);
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/redefinir-senha`,
+      });
+      setCarregando(false);
+      if (error) {
+        setMensagem(error.message);
+        return;
+      }
+      setMensagem('Se esse e-mail tiver conta, enviamos um link pra redefinir a senha.');
+      return;
+    }
 
     if (!email || !senha) {
       setMensagem('Preencha e-mail e senha.');
@@ -57,12 +75,14 @@ export default function Login() {
     <div className="envolucro" style={{ maxWidth: 420, paddingTop: 80 }}>
       <div className="painel">
         <p className="painel-titulo">
-          {modo === 'entrar' ? 'Entrar na plataforma' : 'Criar conta'}
+          {modo === 'entrar' ? 'Entrar na plataforma' : modo === 'criar' ? 'Criar conta' : 'Redefinir senha'}
         </p>
         <p className="painel-legenda">
           {modo === 'entrar'
             ? 'Acesso de assinantes e alunos em aula particular.'
-            : 'A liberação do conteúdo é feita depois, pela administração.'}
+            : modo === 'criar'
+            ? 'A liberação do conteúdo é feita depois, pela administração.'
+            : 'Digite seu e-mail e enviamos um link pra você escolher uma nova senha.'}
         </p>
 
         <form onSubmit={enviar}>
@@ -87,27 +107,35 @@ export default function Login() {
             onChange={(e) => setEmail(e.target.value)}
           />
 
-          <label className="rotulo" htmlFor="senha">Senha</label>
-          <input
-            id="senha"
-            type="password"
-            className="campo"
-            value={senha}
-            onChange={(e) => setSenha(e.target.value)}
-          />
+          {modo !== 'esqueci' && (
+            <>
+              <label className="rotulo" htmlFor="senha">Senha</label>
+              <input
+                id="senha"
+                type="password"
+                className="campo"
+                value={senha}
+                onChange={(e) => setSenha(e.target.value)}
+              />
+            </>
+          )}
 
           {mensagem && <p className="erro">{mensagem}</p>}
 
           <button className="botao" type="submit" disabled={carregando} style={{ width: '100%' }}>
-            {carregando ? 'Um momento...' : modo === 'entrar' ? 'Entrar' : 'Criar conta'}
+            {carregando ? 'Um momento...' : modo === 'entrar' ? 'Entrar' : modo === 'criar' ? 'Criar conta' : 'Enviar link'}
           </button>
         </form>
 
-        <p style={{ marginTop: 16, fontSize: 13 }}>
-          {modo === 'entrar' ? (
-            <>Ainda não tem conta? <a href="#" onClick={(e) => { e.preventDefault(); setModo('criar'); setMensagem(''); }}>Criar uma</a></>
-          ) : (
-            <>Já tem conta? <a href="#" onClick={(e) => { e.preventDefault(); setModo('entrar'); setMensagem(''); }}>Entrar</a></>
+        <p style={{ marginTop: 16, fontSize: 13, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {modo === 'entrar' && (
+            <>
+              <span>Ainda não tem conta? <a href="#" onClick={(e) => { e.preventDefault(); setModo('criar'); setMensagem(''); }}>Criar uma</a></span>
+              <span>Esqueceu a senha? <a href="#" onClick={(e) => { e.preventDefault(); setModo('esqueci'); setMensagem(''); }}>Redefinir</a></span>
+            </>
+          )}
+          {modo !== 'entrar' && (
+            <span>Já tem conta? <a href="#" onClick={(e) => { e.preventDefault(); setModo('entrar'); setMensagem(''); }}>Entrar</a></span>
           )}
         </p>
       </div>
