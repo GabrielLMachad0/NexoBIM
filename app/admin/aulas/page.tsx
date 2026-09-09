@@ -107,7 +107,8 @@ export default function AdminAulas() {
     carregar();
   }
 
-  async function removerAula(id: string) {
+  async function removerAula(id: string, titulo: string) {
+    if (!window.confirm(`Remover a aula "${titulo}"? Isso também apaga o progresso dos alunos nela.`)) return;
     await supabase.from('aulas').delete().eq('id', id);
     carregar();
   }
@@ -136,7 +137,8 @@ export default function AdminAulas() {
     carregar();
   }
 
-  async function removerTarefa(id: string) {
+  async function removerTarefa(id: string, titulo: string) {
+    if (!window.confirm(`Remover a tarefa "${titulo}"?`)) return;
     await supabase.from('tarefas_padrao').delete().eq('id', id);
     carregar();
   }
@@ -203,7 +205,7 @@ export default function AdminAulas() {
                         <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} disabled={indice === 0} onClick={() => moverAula(nivel, a, -1)}>↑</button>
                         <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} disabled={indice === nivel.aulas.length - 1} onClick={() => moverAula(nivel, a, 1)}>↓</button>
                         <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => iniciarEdicaoAula(a)}>editar</button>
-                        <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => removerAula(a.id)}>remover</button>
+                        <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => removerAula(a.id, a.titulo)}>remover</button>
                       </div>
                     </div>
                   )
@@ -224,7 +226,7 @@ export default function AdminAulas() {
                       <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                         <span className="marcador">tarefa</span>
                         <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => iniciarEdicaoTarefa(t)}>editar</button>
-                        <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => removerTarefa(t.id)}>remover</button>
+                        <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => removerTarefa(t.id, t.titulo)}>remover</button>
                       </div>
                     </div>
                   )

@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabaseClient';
 import Cabecalho from '../../components/Cabecalho';
 
 type Curso = { id: string; nome: string };
+type Resumo = { alunos: number; assinantes: number; recursos: number; arquivos: number };
 
 function slugificar(texto: string): string {
   return texto
@@ -19,6 +20,7 @@ export default function AdminHome() {
   const router = useRouter();
   const [carregando, setCarregando] = useState(true);
   const [cursos, setCursos] = useState<Curso[]>([]);
+  const [resumo, setResumo] = useState<Resumo | null>(null);
   const [novoCurso, setNovoCurso] = useState('');
   const [cursoParaNivel, setCursoParaNivel] = useState('');
   const [novoNivel, setNovoNivel] = useState('');
@@ -40,13 +42,26 @@ export default function AdminHome() {
 
     if (!perfil?.is_admin) { router.push('/dashboard'); return; }
 
-    await carregarCursos();
+    await Promise.all([carregarCursos(), carregarResumo()]);
     setCarregando(false);
   }
 
   async function carregarCursos() {
     const { data } = await supabase.from('cursos').select('id, nome').order('ordem');
     setCursos((data as any) || []);
+  }
+
+  async function carregarResumo() {
+    const [{ data: alunos }, { data: recursos }] = await Promise.all([
+      supabase.from('profiles').select('is_assinante').eq('is_admin', false),
+      supabase.from('recursos_download').select('arquivos'),
+    ]);
+    setResumo({
+      alunos: (alunos || []).length,
+      assinantes: (alunos || []).filter((a: any) => a.is_assinante).length,
+      recursos: (recursos || []).length,
+      arquivos: (recursos || []).reduce((s: number, r: any) => s + r.arquivos, 0),
+    });
   }
 
   async function criarCurso(e: React.FormEvent) {
@@ -77,6 +92,15 @@ export default function AdminHome() {
       <Cabecalho ehAdmin />
       <div className="envolucro">
         <h1 style={{ fontSize: 20, fontWeight: 500 }}>Administração</h1>
+
+        {resumo && (
+          <div className="grade-metricas" style={{ marginTop: 16 }}>
+            <div className="painel metrica"><span className="metrica-numero">{resumo.alunos}</span><span className="painel-legenda">alunos</span></div>
+            <div className="painel metrica"><span className="metrica-numero">{resumo.assinantes}</span><span className="painel-legenda">assinantes</span></div>
+            <div className="painel metrica"><span className="metrica-numero">{resumo.recursos}</span><span className="painel-legenda">recursos cadastrados</span></div>
+            <div className="painel metrica"><span className="metrica-numero">{resumo.arquivos.toLocaleString('pt-BR')}</span><span className="painel-legenda">arquivos no acervo</span></div>
+          </div>
+        )}
 
         <div className="painel">
           <p className="painel-titulo">Conteúdo</p>

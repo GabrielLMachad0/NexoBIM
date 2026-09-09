@@ -37,6 +37,9 @@ export default function AdminRecursos() {
   const [verificando, setVerificando] = useState(false);
   const [linksComProblema, setLinksComProblema] = useState<{ id: string; nome: string; categoria: string; status: number }[] | null>(null);
 
+  const [textoImportacao, setTextoImportacao] = useState('');
+  const [mensagemImportacao, setMensagemImportacao] = useState('');
+
   useEffect(() => {
     guardaEcarrega();
   }, []);
@@ -85,7 +88,8 @@ export default function AdminRecursos() {
     carregar();
   }
 
-  async function remover(id: string) {
+  async function remover(id: string, nome: string) {
+    if (!window.confirm(`Remover "${nome}" do acervo?`)) return;
     await supabase.from('recursos_download').delete().eq('id', id);
     carregar();
   }
@@ -120,6 +124,54 @@ export default function AdminRecursos() {
       return;
     }
     setEditandoId(null);
+    carregar();
+  }
+
+  async function importarEmMassa(e: React.FormEvent) {
+    e.preventDefault();
+    setMensagemImportacao('');
+
+    const linhas = textoImportacao.split('\n').map((l) => l.trim()).filter(Boolean);
+    if (linhas.length === 0) return;
+
+    const contadorPorCategoria = new Map<string, number>();
+    for (const r of recursos) {
+      contadorPorCategoria.set(r.categoria, (contadorPorCategoria.get(r.categoria) || 0) + 1);
+    }
+
+    const linhasInvalidas: number[] = [];
+    const novos = linhas.map((linha, indice) => {
+      const partes = linha.split(';').map((p) => p.trim());
+      const [cat, nomeItem, link, qtd, desc] = partes;
+      if (!cat || !nomeItem || !link) {
+        linhasInvalidas.push(indice + 1);
+        return null;
+      }
+      const numArquivos = parseInt(qtd, 10) || 1;
+      const ordem = contadorPorCategoria.get(cat) || 0;
+      contadorPorCategoria.set(cat, ordem + 1);
+      return {
+        categoria: cat,
+        nome: nomeItem,
+        link_drive: link,
+        arquivos: numArquivos,
+        descricao: desc || `${numArquivos} arquivo${numArquivos === 1 ? '' : 's'}`,
+        ordem,
+      };
+    }).filter((r): r is NonNullable<typeof r> => r !== null);
+
+    if (linhasInvalidas.length > 0) {
+      setMensagemImportacao(`Linha(s) ${linhasInvalidas.join(', ')} ignorada(s) — faltou categoria, nome ou link.`);
+    }
+    if (novos.length === 0) return;
+
+    const { error } = await supabase.from('recursos_download').insert(novos);
+    if (error) {
+      setMensagemImportacao(`Erro ao importar: ${error.message}`);
+      return;
+    }
+    setMensagemImportacao((m) => `${m ? m + ' ' : ''}${novos.length} recurso(s) importado(s) com sucesso.`);
+    setTextoImportacao('');
     carregar();
   }
 
@@ -166,6 +218,25 @@ export default function AdminRecursos() {
             <button className="botao" type="submit">Adicionar</button>
           </form>
           {mensagem && <p className="painel-legenda">{mensagem}</p>}
+        </div>
+
+        <div className="painel">
+          <p className="painel-titulo">Importar vários de uma vez</p>
+          <p className="painel-legenda">
+            Uma linha por recurso, campos separados por ponto e vírgula:<br />
+            <code>categoria; nome; link do drive; quantidade de arquivos; descrição (opcional)</code>
+          </p>
+          <form onSubmit={importarEmMassa}>
+            <textarea
+              className="campo"
+              rows={5}
+              placeholder={'Esquadrias; Porta de vidro; https://drive.google.com/...; 3\nEstrutura; Coluna redonda; https://drive.google.com/...; 1'}
+              value={textoImportacao}
+              onChange={(e) => setTextoImportacao(e.target.value)}
+            />
+            <button className="botao" type="submit">Importar</button>
+          </form>
+          {mensagemImportacao && <p className="painel-legenda">{mensagemImportacao}</p>}
         </div>
 
         <div className="painel">
@@ -231,7 +302,7 @@ export default function AdminRecursos() {
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button className="botao fantasma" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => iniciarEdicao(r)}>editar</button>
-                  <button className="botao fantasma" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => remover(r.id)}>remover</button>
+                  <button className="botao fantasma" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => remover(r.id, r.nome)}>remover</button>
                 </div>
               </div>
             )
