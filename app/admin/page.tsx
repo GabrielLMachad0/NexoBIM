@@ -95,10 +95,10 @@ export default function AdminHome() {
 
         {resumo && (
           <div className="grade-metricas" style={{ marginTop: 16 }}>
-            <div className="painel metrica"><span className="metrica-numero">{resumo.alunos}</span><span className="painel-legenda">alunos</span></div>
-            <div className="painel metrica"><span className="metrica-numero">{resumo.assinantes}</span><span className="painel-legenda">assinantes</span></div>
-            <div className="painel metrica"><span className="metrica-numero">{resumo.recursos}</span><span className="painel-legenda">recursos cadastrados</span></div>
-            <div className="painel metrica"><span className="metrica-numero">{resumo.arquivos.toLocaleString('pt-BR')}</span><span className="painel-legenda">arquivos no acervo</span></div>
+            <div className="painel metrica"><span className="metrica-numero">{resumo.alunos}</span><span className="painel-legenda">Alunos</span></div>
+            <div className="painel metrica"><span className="metrica-numero">{resumo.assinantes}</span><span className="painel-legenda">Assinantes</span></div>
+            <div className="painel metrica"><span className="metrica-numero">{resumo.recursos}</span><span className="painel-legenda">Recursos cadastrados</span></div>
+            <div className="painel metrica"><span className="metrica-numero">{resumo.arquivos.toLocaleString('pt-BR')}</span><span className="painel-legenda">Arquivos no acervo</span></div>
           </div>
         )}
 

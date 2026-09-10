@@ -206,10 +206,10 @@ export default function AdminAlunos() {
               required
             />
             <label style={{ fontSize: 13, marginRight: 16 }}>
-              <input type="checkbox" checked={assinanteConvite} onChange={(e) => setAssinanteConvite(e.target.checked)} /> assinante
+              <input type="checkbox" checked={assinanteConvite} onChange={(e) => setAssinanteConvite(e.target.checked)} /> Assinante
             </label>
             <label style={{ fontSize: 13 }}>
-              <input type="checkbox" checked={particularConvite} onChange={(e) => setParticularConvite(e.target.checked)} /> aluno particular
+              <input type="checkbox" checked={particularConvite} onChange={(e) => setParticularConvite(e.target.checked)} /> Aluno particular
             </label>
             <div style={{ marginTop: 12 }}>
               <button className="botao" type="submit">Liberar acesso</button>
@@ -229,7 +229,7 @@ export default function AdminAlunos() {
                     </p>
                   </div>
                   <button className="botao fantasma" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => cancelarPendente(p.email)}>
-                    cancelar
+                    Cancelar
                   </button>
                 </div>
               ))}
@@ -242,10 +242,10 @@ export default function AdminAlunos() {
             <p className="painel-titulo">{aluno.nome}</p>
 
             <label style={{ fontSize: 13, marginRight: 16 }}>
-              <input type="checkbox" checked={aluno.is_assinante} onChange={() => alternarFlag(aluno, 'is_assinante')} /> assinante
+              <input type="checkbox" checked={aluno.is_assinante} onChange={() => alternarFlag(aluno, 'is_assinante')} /> Assinante
             </label>
             <label style={{ fontSize: 13 }}>
-              <input type="checkbox" checked={aluno.is_aluno_particular} onChange={() => alternarFlag(aluno, 'is_aluno_particular')} /> aluno particular
+              <input type="checkbox" checked={aluno.is_aluno_particular} onChange={() => alternarFlag(aluno, 'is_aluno_particular')} /> Aluno particular
             </label>
 
             <div style={{ marginTop: 12 }}>
@@ -254,7 +254,7 @@ export default function AdminAlunos() {
                 style={{ fontSize: 12, padding: '4px 10px' }}
                 onClick={() => alternarExpandido(aluno.id)}
               >
-                {expandido === aluno.id ? 'fechar' : 'ver / adicionar conteúdo particular'}
+                {expandido === aluno.id ? 'Fechar' : 'Ver / adicionar conteúdo particular'}
               </button>
             </div>
 
@@ -269,7 +269,7 @@ export default function AdminAlunos() {
                           <div className="aula-titulo">{p.motivo}</div>
                           <p className="painel-legenda" style={{ margin: 0 }}>{p.conteudo}</p>
                         </div>
-                        <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => removerPlano(p.id, aluno.id)}>remover</button>
+                        <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => removerPlano(p.id, aluno.id)}>Remover</button>
                       </div>
                     ))}
                   </>
@@ -290,7 +290,7 @@ export default function AdminAlunos() {
                         </div>
                         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                           <span className={`marcador ${t.status === 'concluida' ? 'feito' : ''}`}>{t.status}</span>
-                          <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => removerTarefaDesignada(t.id, aluno.id)}>remover</button>
+                          <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => removerTarefaDesignada(t.id, aluno.id)}>Remover</button>
                         </div>
                       </div>
                     ))}
@@ -311,7 +311,7 @@ export default function AdminAlunos() {
                           <div className="aula-titulo">{g.titulo}</div>
                           <p className="painel-legenda" style={{ margin: 0 }}>{new Date(g.data_aula).toLocaleDateString('pt-BR')}</p>
                         </div>
-                        <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => removerGravacao(g.id, aluno.id)}>remover</button>
+                        <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => removerGravacao(g.id, aluno.id)}>Remover</button>
                       </div>
                     ))}
                   </>

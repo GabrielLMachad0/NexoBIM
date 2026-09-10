@@ -301,8 +301,8 @@ export default function AdminRecursos() {
                   </p>
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <button className="botao fantasma" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => iniciarEdicao(r)}>editar</button>
-                  <button className="botao fantasma" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => remover(r.id, r.nome)}>remover</button>
+                  <button className="botao fantasma" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => iniciarEdicao(r)}>Editar</button>
+                  <button className="botao fantasma" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => remover(r.id, r.nome)}>Remover</button>
                 </div>
               </div>
             )

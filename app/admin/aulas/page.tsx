@@ -204,8 +204,8 @@ export default function AdminAulas() {
                         <span className="marcador">{a.youtube_id}</span>
                         <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} disabled={indice === 0} onClick={() => moverAula(nivel, a, -1)}>↑</button>
                         <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} disabled={indice === nivel.aulas.length - 1} onClick={() => moverAula(nivel, a, 1)}>↓</button>
-                        <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => iniciarEdicaoAula(a)}>editar</button>
-                        <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => removerAula(a.id, a.titulo)}>remover</button>
+                        <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => iniciarEdicaoAula(a)}>Editar</button>
+                        <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => removerAula(a.id, a.titulo)}>Remover</button>
                       </div>
                     </div>
                   )
@@ -224,9 +224,9 @@ export default function AdminAulas() {
                     <div className="aula-linha" key={t.id}>
                       <span className="aula-titulo">{t.titulo}</span>
                       <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                        <span className="marcador">tarefa</span>
-                        <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => iniciarEdicaoTarefa(t)}>editar</button>
-                        <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => removerTarefa(t.id, t.titulo)}>remover</button>
+                        <span className="marcador">Tarefa</span>
+                        <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => iniciarEdicaoTarefa(t)}>Editar</button>
+                        <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => removerTarefa(t.id, t.titulo)}>Remover</button>
                       </div>
                     </div>
                   )

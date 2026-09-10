@@ -104,10 +104,10 @@ export default function AdminMetricas() {
         <h1 style={{ fontSize: 20, fontWeight: 500 }}>Métricas</h1>
 
         <div className="grade-metricas">
-          <div className="painel metrica"><span className="metrica-numero">{totalAlunos}</span><span className="painel-legenda">alunos cadastrados</span></div>
-          <div className="painel metrica"><span className="metrica-numero">{assinantes}</span><span className="painel-legenda">assinantes</span></div>
-          <div className="painel metrica"><span className="metrica-numero">{particulares}</span><span className="painel-legenda">alunos particulares</span></div>
-          <div className="painel metrica"><span className="metrica-numero">{certificadosEmitidos}</span><span className="painel-legenda">certificados emitidos</span></div>
+          <div className="painel metrica"><span className="metrica-numero">{totalAlunos}</span><span className="painel-legenda">Alunos cadastrados</span></div>
+          <div className="painel metrica"><span className="metrica-numero">{assinantes}</span><span className="painel-legenda">Assinantes</span></div>
+          <div className="painel metrica"><span className="metrica-numero">{particulares}</span><span className="painel-legenda">Alunos particulares</span></div>
+          <div className="painel metrica"><span className="metrica-numero">{certificadosEmitidos}</span><span className="painel-legenda">Certificados emitidos</span></div>
         </div>
 
         {aulaTop && (
