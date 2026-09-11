@@ -1,4 +1,5 @@
 import './globals.css';
+import ChatBot from '../components/ChatBot';
 
 export const metadata = {
   title: 'NexoBIM — cursos de BIM, Revit e MEP',
@@ -12,7 +13,10 @@ export const viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR">
-      <body>{children}</body>
+      <body>
+        {children}
+        <ChatBot />
+      </body>
     </html>
   );
 }
