@@ -8,9 +8,9 @@ import Cabecalho from '../../../components/Cabecalho';
 
 type Grupo = { id: string; nome: string; criado_em: string };
 type Membro = { id: string; nome: string };
-type Plano = { id: string; motivo: string; conteudo: string };
-type TarefaDesignada = { id: string; titulo: string; descricao: string; status: string; prazo: string | null };
-type Gravacao = { id: string; titulo: string; video_url: string; data_aula: string };
+type Plano = { id: string; motivo: string; conteudo: string; aula_rotulo: string | null };
+type TarefaDesignada = { id: string; titulo: string; descricao: string; status: string; prazo: string | null; aula_rotulo: string | null };
+type Gravacao = { id: string; titulo: string; video_url: string; data_aula: string; aula_rotulo: string | null };
 
 export default function AdminGrupos() {
   const router = useRouter();
@@ -25,11 +25,14 @@ export default function AdminGrupos() {
 
   const [motivo, setMotivo] = useState('');
   const [conteudoPlano, setConteudoPlano] = useState('');
+  const [rotuloPlano, setRotuloPlano] = useState('');
   const [tituloTarefa, setTituloTarefa] = useState('');
   const [descricaoTarefa, setDescricaoTarefa] = useState('');
   const [prazoTarefa, setPrazoTarefa] = useState('');
+  const [rotuloTarefa, setRotuloTarefa] = useState('');
   const [tituloGravacao, setTituloGravacao] = useState('');
   const [linkGravacao, setLinkGravacao] = useState('');
+  const [rotuloGravacao, setRotuloGravacao] = useState('');
 
   const [membrosDoGrupo, setMembrosDoGrupo] = useState<Membro[]>([]);
   const [planosDoGrupo, setPlanosDoGrupo] = useState<Plano[]>([]);
@@ -82,9 +85,9 @@ export default function AdminGrupos() {
   async function carregarConteudoDoGrupo(grupoId: string) {
     const [{ data: membros }, { data: planos }, { data: tarefas }, { data: gravacoes }] = await Promise.all([
       supabase.from('profiles').select('id, nome').eq('grupo_id', grupoId).order('nome'),
-      supabase.from('planos_personalizados').select('id, motivo, conteudo').eq('grupo_id', grupoId).order('criado_em', { ascending: false }),
-      supabase.from('tarefas_designadas').select('id, titulo, descricao, status, prazo').eq('grupo_id', grupoId),
-      supabase.from('aulas_particulares_gravadas').select('id, titulo, video_url, data_aula').eq('grupo_id', grupoId).order('data_aula', { ascending: false }),
+      supabase.from('planos_personalizados').select('id, motivo, conteudo, aula_rotulo').eq('grupo_id', grupoId).order('criado_em', { ascending: false }),
+      supabase.from('tarefas_designadas').select('id, titulo, descricao, status, prazo, aula_rotulo').eq('grupo_id', grupoId),
+      supabase.from('aulas_particulares_gravadas').select('id, titulo, video_url, data_aula, aula_rotulo').eq('grupo_id', grupoId).order('data_aula', { ascending: false }),
     ]);
     setMembrosDoGrupo((membros as any) || []);
     setPlanosDoGrupo((planos as any) || []);
@@ -118,26 +121,26 @@ export default function AdminGrupos() {
 
   async function salvarPlano(grupoId: string) {
     if (!motivo || !conteudoPlano) return;
-    await supabase.from('planos_personalizados').insert({ grupo_id: grupoId, motivo, conteudo: conteudoPlano });
-    setMotivo(''); setConteudoPlano('');
+    await supabase.from('planos_personalizados').insert({ grupo_id: grupoId, motivo, conteudo: conteudoPlano, aula_rotulo: rotuloPlano.trim() || null });
+    setMotivo(''); setConteudoPlano(''); setRotuloPlano('');
     carregarConteudoDoGrupo(grupoId);
   }
 
   async function salvarTarefa(grupoId: string) {
     if (!tituloTarefa) return;
     await supabase.from('tarefas_designadas').insert({
-      grupo_id: grupoId, titulo: tituloTarefa, descricao: descricaoTarefa, prazo: prazoTarefa || null,
+      grupo_id: grupoId, titulo: tituloTarefa, descricao: descricaoTarefa, prazo: prazoTarefa || null, aula_rotulo: rotuloTarefa.trim() || null,
     });
-    setTituloTarefa(''); setDescricaoTarefa(''); setPrazoTarefa('');
+    setTituloTarefa(''); setDescricaoTarefa(''); setPrazoTarefa(''); setRotuloTarefa('');
     carregarConteudoDoGrupo(grupoId);
   }
 
   async function salvarGravacao(grupoId: string) {
     if (!tituloGravacao || !linkGravacao) return;
     await supabase.from('aulas_particulares_gravadas').insert({
-      grupo_id: grupoId, titulo: tituloGravacao, video_url: linkGravacao,
+      grupo_id: grupoId, titulo: tituloGravacao, video_url: linkGravacao, aula_rotulo: rotuloGravacao.trim() || null,
     });
-    setTituloGravacao(''); setLinkGravacao('');
+    setTituloGravacao(''); setLinkGravacao(''); setRotuloGravacao('');
     carregarConteudoDoGrupo(grupoId);
   }
 
@@ -237,7 +240,7 @@ export default function AdminGrupos() {
                     {planosDoGrupo.map((p) => (
                       <div className="aula-linha" key={p.id}>
                         <div>
-                          <div className="aula-titulo">{p.motivo}</div>
+                          <div className="aula-titulo">{p.motivo}{p.aula_rotulo && <span className="marcador" style={{ marginLeft: 8 }}>{p.aula_rotulo}</span>}</div>
                           <p className="painel-legenda" style={{ margin: 0 }}>{p.conteudo}</p>
                         </div>
                         <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => removerPlano(p.id, grupo.id)}>Remover</button>
@@ -248,6 +251,7 @@ export default function AdminGrupos() {
                 <label className="rotulo" style={{ marginTop: 16 }}>Plano de aula do grupo</label>
                 <input className="campo" placeholder="Motivo / dúvida da aula" value={motivo} onChange={(e) => setMotivo(e.target.value)} />
                 <textarea className="campo" placeholder="Conteúdo do plano" rows={3} value={conteudoPlano} onChange={(e) => setConteudoPlano(e.target.value)} />
+                <input className="campo" placeholder="Aula (opcional — ex.: Aula 1 e 2 — deixe vazio se for o plano geral do curso)" value={rotuloPlano} onChange={(e) => setRotuloPlano(e.target.value)} />
                 <button className="botao fantasma" onClick={() => salvarPlano(grupo.id)}>Salvar plano</button>
 
                 {tarefasDoGrupo.length > 0 && (
@@ -256,7 +260,7 @@ export default function AdminGrupos() {
                     {tarefasDoGrupo.map((t) => (
                       <div className="aula-linha" key={t.id}>
                         <div>
-                          <div className="aula-titulo">{t.titulo}</div>
+                          <div className="aula-titulo">{t.titulo}{t.aula_rotulo && <span className="marcador" style={{ marginLeft: 8 }}>{t.aula_rotulo}</span>}</div>
                           <p className="painel-legenda" style={{ margin: 0 }}>{t.descricao} {t.prazo ? `· prazo ${new Date(t.prazo).toLocaleDateString('pt-BR')}` : ''}</p>
                         </div>
                         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -271,6 +275,7 @@ export default function AdminGrupos() {
                 <input className="campo" placeholder="Título" value={tituloTarefa} onChange={(e) => setTituloTarefa(e.target.value)} />
                 <input className="campo" placeholder="Descrição" value={descricaoTarefa} onChange={(e) => setDescricaoTarefa(e.target.value)} />
                 <input className="campo" type="date" value={prazoTarefa} onChange={(e) => setPrazoTarefa(e.target.value)} />
+                <input className="campo" placeholder="Aula (opcional — ex.: Aula 1 e 2)" value={rotuloTarefa} onChange={(e) => setRotuloTarefa(e.target.value)} />
                 <button className="botao fantasma" onClick={() => salvarTarefa(grupo.id)}>Designar tarefa</button>
                 <p className="painel-legenda" style={{ marginTop: 6 }}>
                   O status da tarefa é único pro grupo inteiro — quando alguém do grupo (ou você) marcar como entregue/concluída, vale pra todo mundo do grupo.
@@ -282,7 +287,7 @@ export default function AdminGrupos() {
                     {gravacoesDoGrupo.map((g) => (
                       <div className="aula-linha" key={g.id}>
                         <div>
-                          <div className="aula-titulo">{g.titulo}</div>
+                          <div className="aula-titulo">{g.titulo}{g.aula_rotulo && <span className="marcador" style={{ marginLeft: 8 }}>{g.aula_rotulo}</span>}</div>
                           <p className="painel-legenda" style={{ margin: 0 }}>{new Date(g.data_aula).toLocaleDateString('pt-BR')}</p>
                         </div>
                         <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => removerGravacao(g.id, grupo.id)}>Remover</button>
@@ -293,6 +298,7 @@ export default function AdminGrupos() {
                 <label className="rotulo" style={{ marginTop: 16 }}>Aula gravada do grupo (link do Teams)</label>
                 <input className="campo" placeholder="Título (ex.: Aula 12/09)" value={tituloGravacao} onChange={(e) => setTituloGravacao(e.target.value)} />
                 <input className="campo" placeholder="Link da gravação" value={linkGravacao} onChange={(e) => setLinkGravacao(e.target.value)} />
+                <input className="campo" placeholder="Aula (rótulo — ex.: Aula 1 e 2)" value={rotuloGravacao} onChange={(e) => setRotuloGravacao(e.target.value)} />
                 <button className="botao fantasma" onClick={() => salvarGravacao(grupo.id)}>Vincular gravação</button>
               </div>
             )}

@@ -6,7 +6,8 @@ import Link from 'next/link';
 import { supabase } from '../../lib/supabaseClient';
 import Cabecalho from '../../components/Cabecalho';
 import AnelProgresso from '../../components/AnelProgresso';
-import { comLinksClicaveis } from '../../lib/linkify';
+import SecaoAulaParticular from '../../components/SecaoAulaParticular';
+import { Plano, TarefaDesignada, AulaGravada } from '../../lib/aulaParticular';
 
 type Aula = { id: string; titulo: string; youtube_id: string; ordem: number };
 type TarefaPadrao = { id: string; titulo: string; descricao: string };
@@ -19,16 +20,6 @@ type Nivel = {
 };
 type Curso = { id: string; nome: string; niveis: Nivel[] };
 
-type TarefaDesignada = {
-  id: string;
-  titulo: string;
-  descricao: string;
-  status: string;
-  prazo: string | null;
-};
-type PlanoPersonalizado = { id: string; motivo: string; conteudo: string; criado_em: string };
-type AulaGravada = { id: string; titulo: string; video_url: string; data_aula: string };
-
 export default function Dashboard() {
   const router = useRouter();
   const [carregando, setCarregando] = useState(true);
@@ -38,7 +29,7 @@ export default function Dashboard() {
   const [tarefasFeitas, setTarefasFeitas] = useState<Set<string>>(new Set());
   const [certificados, setCertificados] = useState<Set<string>>(new Set());
 
-  const [planos, setPlanos] = useState<PlanoPersonalizado[]>([]);
+  const [planos, setPlanos] = useState<Plano[]>([]);
   const [tarefasDesignadas, setTarefasDesignadas] = useState<TarefaDesignada[]>([]);
   const [aulasGravadas, setAulasGravadas] = useState<AulaGravada[]>([]);
   const [continuarEm, setContinuarEm] = useState<{ nivelId: string; nivelNome: string; cursoNome: string; aulaTitulo: string } | null>(null);
@@ -112,20 +103,20 @@ export default function Dashboard() {
       tarefas.push(
         supabase
           .from('planos_personalizados')
-          .select('id, motivo, conteudo, criado_em')
+          .select('id, motivo, conteudo, aula_rotulo')
           .or(dono)
-          .order('criado_em', { ascending: false })
+          .order('criado_em', { ascending: true })
           .then(({ data }) => setPlanos((data as any) || [])),
         supabase
           .from('tarefas_designadas')
-          .select('id, titulo, descricao, status, prazo')
+          .select('id, titulo, descricao, status, prazo, aula_rotulo')
           .or(dono)
           .then(({ data }) => setTarefasDesignadas((data as any) || [])),
         supabase
           .from('aulas_particulares_gravadas')
-          .select('id, titulo, video_url, data_aula')
+          .select('id, titulo, video_url, data_aula, aula_rotulo')
           .or(dono)
-          .order('data_aula', { ascending: false })
+          .order('data_aula', { ascending: true })
           .then(({ data }) => setAulasGravadas((data as any) || [])),
       );
     }
@@ -157,36 +148,12 @@ export default function Dashboard() {
               <p className="painel-legenda" style={{ marginTop: -4 }}>Você está no grupo <strong>{perfil.grupo_nome}</strong> — o conteúdo abaixo é o mesmo pra todo o grupo.</p>
             )}
 
-            {aulasGravadas.map((a) => (
-              <div className="painel" key={a.id}>
-                <p className="painel-titulo">{a.titulo}</p>
-                <p className="painel-legenda">Gravada em {new Date(a.data_aula).toLocaleDateString('pt-BR')}</p>
-                <a className="botao" href={a.video_url} target="_blank" rel="noreferrer">Assistir gravação</a>
-              </div>
-            ))}
-
-            {planos.map((p) => (
-              <div className="painel" key={p.id}>
-                <p className="painel-titulo">Plano de aula</p>
-                <p className="painel-legenda">Sobre: {p.motivo}</p>
-                <p style={{ fontSize: 14, whiteSpace: 'pre-wrap' }}>{comLinksClicaveis(p.conteudo)}</p>
-              </div>
-            ))}
-
-            {tarefasDesignadas.length > 0 && (
-              <div className="painel">
-                <p className="painel-titulo">Suas tarefas</p>
-                {tarefasDesignadas.map((t) => (
-                  <div className="aula-linha" key={t.id} style={{ alignItems: 'flex-start' }}>
-                    <div>
-                      <div className="aula-titulo">{t.titulo}</div>
-                      <p className="painel-legenda" style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{comLinksClicaveis(t.descricao)}</p>
-                    </div>
-                    <span className={`marcador ${t.status === 'concluida' ? 'feito' : ''}`}>{t.status}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+            <SecaoAulaParticular
+              aulasGravadas={aulasGravadas}
+              planos={planos}
+              tarefasDesignadas={tarefasDesignadas}
+              hrefPlano="/dashboard/plano"
+            />
           </>
         )}
 

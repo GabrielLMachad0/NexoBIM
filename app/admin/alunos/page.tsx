@@ -10,9 +10,9 @@ import { porGenero } from '../../../lib/genero';
 type Aluno = { id: string; nome: string; is_assinante: boolean; is_aluno_particular: boolean; grupo_id: string | null; genero: 'masculino' | 'feminino' | null };
 type AcessoPendente = { email: string; is_assinante: boolean; is_aluno_particular: boolean; grupo_id: string | null; atualizado_em: string };
 type Grupo = { id: string; nome: string };
-type Plano = { id: string; motivo: string; conteudo: string };
-type TarefaDesignada = { id: string; titulo: string; descricao: string; status: string; prazo: string | null };
-type Gravacao = { id: string; titulo: string; video_url: string; data_aula: string };
+type Plano = { id: string; motivo: string; conteudo: string; aula_rotulo: string | null };
+type TarefaDesignada = { id: string; titulo: string; descricao: string; status: string; prazo: string | null; aula_rotulo: string | null };
+type Gravacao = { id: string; titulo: string; video_url: string; data_aula: string; aula_rotulo: string | null };
 
 export default function AdminAlunos() {
   const router = useRouter();
@@ -30,11 +30,14 @@ export default function AdminAlunos() {
 
   const [motivo, setMotivo] = useState('');
   const [conteudoPlano, setConteudoPlano] = useState('');
+  const [rotuloPlano, setRotuloPlano] = useState('');
   const [tituloTarefa, setTituloTarefa] = useState('');
   const [descricaoTarefa, setDescricaoTarefa] = useState('');
   const [prazoTarefa, setPrazoTarefa] = useState('');
+  const [rotuloTarefa, setRotuloTarefa] = useState('');
   const [tituloGravacao, setTituloGravacao] = useState('');
   const [linkGravacao, setLinkGravacao] = useState('');
+  const [rotuloGravacao, setRotuloGravacao] = useState('');
   const [mensagem, setMensagem] = useState('');
 
   const [planosDoAluno, setPlanosDoAluno] = useState<Plano[]>([]);
@@ -133,9 +136,9 @@ export default function AdminAlunos() {
 
   async function carregarConteudoDoAluno(alunoId: string) {
     const [{ data: planos }, { data: tarefas }, { data: gravacoes }] = await Promise.all([
-      supabase.from('planos_personalizados').select('id, motivo, conteudo').eq('aluno_id', alunoId).order('criado_em', { ascending: false }),
-      supabase.from('tarefas_designadas').select('id, titulo, descricao, status, prazo').eq('aluno_id', alunoId),
-      supabase.from('aulas_particulares_gravadas').select('id, titulo, video_url, data_aula').eq('aluno_id', alunoId).order('data_aula', { ascending: false }),
+      supabase.from('planos_personalizados').select('id, motivo, conteudo, aula_rotulo').eq('aluno_id', alunoId).order('criado_em', { ascending: false }),
+      supabase.from('tarefas_designadas').select('id, titulo, descricao, status, prazo, aula_rotulo').eq('aluno_id', alunoId),
+      supabase.from('aulas_particulares_gravadas').select('id, titulo, video_url, data_aula, aula_rotulo').eq('aluno_id', alunoId).order('data_aula', { ascending: false }),
     ]);
     setPlanosDoAluno((planos as any) || []);
     setTarefasDoAluno((tarefas as any) || []);
@@ -153,8 +156,8 @@ export default function AdminAlunos() {
 
   async function salvarPlano(alunoId: string) {
     if (!motivo || !conteudoPlano) return;
-    await supabase.from('planos_personalizados').insert({ aluno_id: alunoId, motivo, conteudo: conteudoPlano });
-    setMotivo(''); setConteudoPlano('');
+    await supabase.from('planos_personalizados').insert({ aluno_id: alunoId, motivo, conteudo: conteudoPlano, aula_rotulo: rotuloPlano.trim() || null });
+    setMotivo(''); setConteudoPlano(''); setRotuloPlano('');
     setMensagem('Plano de aula adicionado.');
     carregarConteudoDoAluno(alunoId);
   }
@@ -162,9 +165,9 @@ export default function AdminAlunos() {
   async function salvarTarefa(alunoId: string) {
     if (!tituloTarefa) return;
     await supabase.from('tarefas_designadas').insert({
-      aluno_id: alunoId, titulo: tituloTarefa, descricao: descricaoTarefa, prazo: prazoTarefa || null,
+      aluno_id: alunoId, titulo: tituloTarefa, descricao: descricaoTarefa, prazo: prazoTarefa || null, aula_rotulo: rotuloTarefa.trim() || null,
     });
-    setTituloTarefa(''); setDescricaoTarefa(''); setPrazoTarefa('');
+    setTituloTarefa(''); setDescricaoTarefa(''); setPrazoTarefa(''); setRotuloTarefa('');
     setMensagem('Tarefa designada.');
     carregarConteudoDoAluno(alunoId);
   }
@@ -172,9 +175,9 @@ export default function AdminAlunos() {
   async function salvarGravacao(alunoId: string) {
     if (!tituloGravacao || !linkGravacao) return;
     await supabase.from('aulas_particulares_gravadas').insert({
-      aluno_id: alunoId, titulo: tituloGravacao, video_url: linkGravacao,
+      aluno_id: alunoId, titulo: tituloGravacao, video_url: linkGravacao, aula_rotulo: rotuloGravacao.trim() || null,
     });
-    setTituloGravacao(''); setLinkGravacao('');
+    setTituloGravacao(''); setLinkGravacao(''); setRotuloGravacao('');
     setMensagem('Gravação vinculada — só esse aluno vai conseguir ver.');
     carregarConteudoDoAluno(alunoId);
   }
@@ -322,7 +325,7 @@ export default function AdminAlunos() {
                     {planosDoAluno.map((p) => (
                       <div className="aula-linha" key={p.id}>
                         <div>
-                          <div className="aula-titulo">{p.motivo}</div>
+                          <div className="aula-titulo">{p.motivo}{p.aula_rotulo && <span className="marcador" style={{ marginLeft: 8 }}>{p.aula_rotulo}</span>}</div>
                           <p className="painel-legenda" style={{ margin: 0 }}>{p.conteudo}</p>
                         </div>
                         <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => removerPlano(p.id, aluno.id)}>Remover</button>
@@ -333,6 +336,7 @@ export default function AdminAlunos() {
                 <label className="rotulo" style={{ marginTop: 16 }}>Plano de aula personalizado</label>
                 <input className="campo" placeholder="Motivo / dúvida da aula" value={motivo} onChange={(e) => setMotivo(e.target.value)} />
                 <textarea className="campo" placeholder="Conteúdo do plano" rows={3} value={conteudoPlano} onChange={(e) => setConteudoPlano(e.target.value)} />
+                <input className="campo" placeholder="Aula (opcional — ex.: Aula 1 e 2 — deixe vazio se for o plano geral do curso)" value={rotuloPlano} onChange={(e) => setRotuloPlano(e.target.value)} />
                 <button className="botao fantasma" onClick={() => salvarPlano(aluno.id)}>Salvar plano</button>
 
                 {tarefasDoAluno.length > 0 && (
@@ -341,7 +345,7 @@ export default function AdminAlunos() {
                     {tarefasDoAluno.map((t) => (
                       <div className="aula-linha" key={t.id}>
                         <div>
-                          <div className="aula-titulo">{t.titulo}</div>
+                          <div className="aula-titulo">{t.titulo}{t.aula_rotulo && <span className="marcador" style={{ marginLeft: 8 }}>{t.aula_rotulo}</span>}</div>
                           <p className="painel-legenda" style={{ margin: 0 }}>{t.descricao} {t.prazo ? `· prazo ${new Date(t.prazo).toLocaleDateString('pt-BR')}` : ''}</p>
                         </div>
                         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -356,6 +360,7 @@ export default function AdminAlunos() {
                 <input className="campo" placeholder="Título" value={tituloTarefa} onChange={(e) => setTituloTarefa(e.target.value)} />
                 <input className="campo" placeholder="Descrição" value={descricaoTarefa} onChange={(e) => setDescricaoTarefa(e.target.value)} />
                 <input className="campo" type="date" value={prazoTarefa} onChange={(e) => setPrazoTarefa(e.target.value)} />
+                <input className="campo" placeholder="Aula (opcional — ex.: Aula 1 e 2)" value={rotuloTarefa} onChange={(e) => setRotuloTarefa(e.target.value)} />
                 <button className="botao fantasma" onClick={() => salvarTarefa(aluno.id)}>Designar tarefa</button>
 
                 {gravacoesDoAluno.length > 0 && (
@@ -364,7 +369,7 @@ export default function AdminAlunos() {
                     {gravacoesDoAluno.map((g) => (
                       <div className="aula-linha" key={g.id}>
                         <div>
-                          <div className="aula-titulo">{g.titulo}</div>
+                          <div className="aula-titulo">{g.titulo}{g.aula_rotulo && <span className="marcador" style={{ marginLeft: 8 }}>{g.aula_rotulo}</span>}</div>
                           <p className="painel-legenda" style={{ margin: 0 }}>{new Date(g.data_aula).toLocaleDateString('pt-BR')}</p>
                         </div>
                         <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => removerGravacao(g.id, aluno.id)}>Remover</button>
@@ -375,6 +380,7 @@ export default function AdminAlunos() {
                 <label className="rotulo" style={{ marginTop: 16 }}>Aula particular gravada (link do Teams)</label>
                 <input className="campo" placeholder="Título (ex.: Aula 12/09)" value={tituloGravacao} onChange={(e) => setTituloGravacao(e.target.value)} />
                 <input className="campo" placeholder="Link da gravação" value={linkGravacao} onChange={(e) => setLinkGravacao(e.target.value)} />
+                <input className="campo" placeholder="Aula (rótulo — ex.: Aula 1 e 2)" value={rotuloGravacao} onChange={(e) => setRotuloGravacao(e.target.value)} />
                 <button className="botao fantasma" onClick={() => salvarGravacao(aluno.id)}>Vincular gravação</button>
               </div>
             )}

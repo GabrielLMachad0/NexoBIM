@@ -145,12 +145,16 @@ alter table acessos_pendentes add column grupo_id uuid references grupos_estudo(
 
 -- planos_personalizados, tarefas_designadas e aulas_particulares_gravadas
 -- pertencem a UM aluno OU a UM grupo — nunca os dois, nunca nenhum.
+-- aula_rotulo (ex.: "Aula 1 e 2") agrupa plano, tarefa e gravação da MESMA
+-- aula, pra montar os "balões" clicáveis no painel do aluno. Nulo = conteúdo
+-- geral, não amarrado a uma aula específica (ex.: o currículo do curso).
 create table planos_personalizados (
   id uuid primary key default gen_random_uuid(),
   aluno_id uuid references profiles(id) on delete cascade,
   grupo_id uuid references grupos_estudo(id) on delete cascade,
   motivo text not null,          -- a dúvida/razão que motivou a aula
   conteudo text not null,
+  aula_rotulo text,
   criado_em timestamptz not null default now(),
   constraint plano_pertence_a_aluno_ou_grupo
     check ((aluno_id is not null and grupo_id is null) or (aluno_id is null and grupo_id is not null))
@@ -165,6 +169,7 @@ create table tarefas_designadas (
   descricao text not null default '',
   status text not null default 'pendente' check (status in ('pendente','entregue','concluida')),
   prazo date,
+  aula_rotulo text,
   constraint tarefa_pertence_a_aluno_ou_grupo
     check ((aluno_id is not null and grupo_id is null) or (aluno_id is null and grupo_id is not null))
 );
@@ -178,6 +183,7 @@ create table aulas_particulares_gravadas (
   titulo text not null,
   video_url text not null,   -- link da gravação do Teams (ou onde ela for hospedada)
   data_aula date not null default current_date,
+  aula_rotulo text,
   constraint gravacao_pertence_a_aluno_ou_grupo
     check ((aluno_id is not null and grupo_id is null) or (aluno_id is null and grupo_id is not null))
 );
