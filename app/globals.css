@@ -151,11 +151,26 @@ a {
 
 .aula-linha {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 8px 16px;
   padding: 10px 0;
   border-top: 1px solid var(--borda);
+}
+
+/* Em telas estreitas, um título longo junto de vários botões de ação
+   (editar/remover/mover) não cabe numa linha só — sem isso, o grupo de
+   botões ficava flutuando por cima do texto quebrado em várias linhas. */
+@media (max-width: 480px) {
+  .aula-linha {
+    align-items: flex-start;
+  }
+
+  .aula-linha > div:last-child {
+    flex-wrap: wrap;
+    width: 100%;
+  }
 }
 
 .aula-linha:first-of-type {
