@@ -3,15 +3,23 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
+import { chutarGeneroPeloNome, Genero } from '../../lib/genero';
 
 export default function Login() {
   const router = useRouter();
   const [modo, setModo] = useState<'entrar' | 'criar' | 'esqueci'>('entrar');
   const [nome, setNome] = useState('');
+  const [genero, setGenero] = useState<Genero>(null);
+  const [generoEscolhidoManualmente, setGeneroEscolhidoManualmente] = useState(false);
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [mensagem, setMensagem] = useState('');
   const [carregando, setCarregando] = useState(false);
+
+  function aoMudarNome(valor: string) {
+    setNome(valor);
+    if (!generoEscolhidoManualmente) setGenero(chutarGeneroPeloNome(valor));
+  }
 
   async function enviar(e: React.FormEvent) {
     e.preventDefault();
@@ -59,7 +67,7 @@ export default function Login() {
       const { error } = await supabase.auth.signUp({
         email,
         password: senha,
-        options: { data: { nome }, emailRedirectTo: `${window.location.origin}/login` },
+        options: { data: { nome, genero: genero || '' }, emailRedirectTo: `${window.location.origin}/login` },
       });
       setCarregando(false);
       if (error) {
@@ -93,8 +101,23 @@ export default function Login() {
                 id="nome"
                 className="campo"
                 value={nome}
-                onChange={(e) => setNome(e.target.value)}
+                onChange={(e) => aoMudarNome(e.target.value)}
               />
+
+              <label className="rotulo" htmlFor="genero">Como prefere ser chamado(a)?</label>
+              <select
+                id="genero"
+                className="campo"
+                value={genero ?? ''}
+                onChange={(e) => {
+                  setGeneroEscolhidoManualmente(true);
+                  setGenero((e.target.value || null) as Genero);
+                }}
+              >
+                <option value="">Prefiro não dizer</option>
+                <option value="feminino">Aluna</option>
+                <option value="masculino">Aluno</option>
+              </select>
             </>
           )}
 

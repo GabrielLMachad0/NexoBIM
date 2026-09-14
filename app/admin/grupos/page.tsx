@@ -207,9 +207,9 @@ export default function AdminGrupos() {
 
             {expandido === grupo.id && (
               <div style={{ marginTop: 16, borderTop: '1px solid var(--borda)', paddingTop: 16 }}>
-                <label className="rotulo">Alunas no grupo</label>
+                <label className="rotulo">Integrantes do grupo</label>
                 {membrosDoGrupo.length === 0 && (
-                  <p className="painel-legenda" style={{ marginTop: 0 }}>Nenhuma aluna neste grupo ainda.</p>
+                  <p className="painel-legenda" style={{ marginTop: 0 }}>Ninguém neste grupo ainda.</p>
                 )}
                 {membrosDoGrupo.map((m) => (
                   <div className="aula-linha" key={m.id}>
@@ -222,13 +222,13 @@ export default function AdminGrupos() {
                 ))}
                 <div style={{ display: 'flex', gap: 8, marginTop: 12, alignItems: 'center' }}>
                   <select className="campo" style={{ marginBottom: 0 }} value={membroParaAdicionar} onChange={(e) => setMembroParaAdicionar(e.target.value)}>
-                    <option value="">Escolha uma aluna particular...</option>
+                    <option value="">Escolha quem adicionar...</option>
                     {alunosSemGrupo.map((a) => <option value={a.id} key={a.id}>{a.nome}</option>)}
                   </select>
                   <button className="botao fantasma" style={{ whiteSpace: 'nowrap' }} onClick={() => adicionarMembro(grupo.id)}>Adicionar ao grupo</button>
                 </div>
                 <p className="painel-legenda" style={{ marginTop: 6 }}>
-                  Só aparecem aqui alunas marcadas como "Aluno particular" em <code>/admin/alunos</code> e que ainda não estão em outro grupo.
+                  Só aparecem aqui pessoas marcadas como "Aluno particular" em <code>/admin/alunos</code> e que ainda não estão em outro grupo.
                 </p>
 
                 {planosDoGrupo.length > 0 && (
@@ -273,7 +273,7 @@ export default function AdminGrupos() {
                 <input className="campo" type="date" value={prazoTarefa} onChange={(e) => setPrazoTarefa(e.target.value)} />
                 <button className="botao fantasma" onClick={() => salvarTarefa(grupo.id)}>Designar tarefa</button>
                 <p className="painel-legenda" style={{ marginTop: 6 }}>
-                  O status da tarefa é único pro grupo inteiro — quando uma aluna (ou você) marcar como entregue/concluída, vale pra todo mundo do grupo.
+                  O status da tarefa é único pro grupo inteiro — quando alguém do grupo (ou você) marcar como entregue/concluída, vale pra todo mundo do grupo.
                 </p>
 
                 {gravacoesDoGrupo.length > 0 && (

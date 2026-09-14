@@ -13,6 +13,10 @@ create table profiles (
   is_assinante boolean not null default false,
   is_aluno_particular boolean not null default false,
   is_admin boolean not null default false,
+  -- Como a pessoa se identifica (informado por ela mesma no cadastro) —
+  -- usado só pra escolher "aluno"/"aluna" no texto da plataforma. Nulo até
+  -- ela informar; nunca inferido e gravado como se fosse fato.
+  genero text check (genero in ('masculino', 'feminino')),
   created_at timestamptz not null default now()
 );
 
@@ -35,14 +39,15 @@ declare
 begin
   select * into pendente from acessos_pendentes where email = new.email;
 
-  insert into profiles (id, nome, email, is_assinante, is_aluno_particular, grupo_id)
+  insert into profiles (id, nome, email, is_assinante, is_aluno_particular, grupo_id, genero)
   values (
     new.id,
     coalesce(new.raw_user_meta_data->>'nome', new.email),
     new.email,
     coalesce(pendente.is_assinante, false),
     coalesce(pendente.is_aluno_particular, false),
-    pendente.grupo_id
+    pendente.grupo_id,
+    nullif(new.raw_user_meta_data->>'genero', '')
   );
 
   delete from acessos_pendentes where email = new.email;

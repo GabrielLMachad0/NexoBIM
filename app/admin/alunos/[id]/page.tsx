@@ -7,6 +7,7 @@ import { supabase } from '../../../../lib/supabaseClient';
 import Cabecalho from '../../../../components/Cabecalho';
 import AnelProgresso from '../../../../components/AnelProgresso';
 import { comLinksClicaveis } from '../../../../lib/linkify';
+import { porGenero } from '../../../../lib/genero';
 
 type Aula = { id: string; ordem: number };
 type TarefaPadrao = { id: string };
@@ -24,6 +25,7 @@ type PerfilAluno = {
   is_aluno_particular: boolean;
   grupo_id: string | null;
   grupo_nome: string | null;
+  genero: 'masculino' | 'feminino' | null;
 };
 
 export default function PreviewAluno() {
@@ -55,7 +57,7 @@ export default function PreviewAluno() {
     const alunoId = params.id;
     const { data: perfilData } = await supabase
       .from('profiles')
-      .select('nome, email, is_assinante, is_aluno_particular, grupo_id, grupos_estudo(nome)')
+      .select('nome, email, is_assinante, is_aluno_particular, grupo_id, genero, grupos_estudo(nome)')
       .eq('id', alunoId)
       .maybeSingle();
 
@@ -69,6 +71,7 @@ export default function PreviewAluno() {
       is_aluno_particular: perfilData.is_aluno_particular,
       grupo_id: grupoId,
       grupo_nome: (perfilData as any).grupos_estudo?.nome || null,
+      genero: (perfilData as any).genero,
     });
 
     const tarefas: PromiseLike<void>[] = [];
@@ -116,7 +119,9 @@ export default function PreviewAluno() {
 
         <div className="painel" style={{ marginTop: 12, borderColor: 'var(--azul-linha)' }}>
           <span className="etiqueta-nivel">Pré-visualização</span>
-          <p className="painel-titulo" style={{ marginTop: 6 }}>É assim que {perfil.nome} vê o painel dela</p>
+          <p className="painel-titulo" style={{ marginTop: 6 }}>
+            É assim que {perfil.nome} vê o painel {porGenero(perfil.genero, perfil.nome, { masculino: 'dele', feminino: 'dela', neutro: '' })}
+          </p>
           <p className="painel-legenda" style={{ margin: 0 }}>
             {[perfil.is_assinante && 'assinante', perfil.is_aluno_particular && 'aluno particular', perfil.grupo_nome && `grupo: ${perfil.grupo_nome}`]
               .filter(Boolean).join(' · ') || 'sem acesso liberado ainda'}
@@ -128,7 +133,9 @@ export default function PreviewAluno() {
         {!perfil.is_assinante && !perfil.is_aluno_particular && (
           <div className="painel">
             <p className="painel-titulo">Esta conta ainda não tem acesso liberado</p>
-            <p className="painel-legenda">É isso que ela vê até você liberar assinatura ou aula particular em <Link href="/admin/alunos">/admin/alunos</Link>.</p>
+            <p className="painel-legenda">
+              É isso que {porGenero(perfil.genero, perfil.nome, { masculino: 'ele vê', feminino: 'ela vê', neutro: `${perfil.nome} vê` })} até você liberar assinatura ou aula particular em <Link href="/admin/alunos">/admin/alunos</Link>.
+            </p>
           </div>
         )}
 
@@ -136,7 +143,9 @@ export default function PreviewAluno() {
           <>
             <h2 style={{ fontSize: 15, fontWeight: 500, color: 'var(--texto-suave)', marginTop: 28 }}>Sua aula particular</h2>
             {perfil.grupo_nome && (
-              <p className="painel-legenda" style={{ marginTop: -4 }}>Ela está no grupo <strong>{perfil.grupo_nome}</strong> — o conteúdo abaixo é o mesmo pra todo o grupo.</p>
+              <p className="painel-legenda" style={{ marginTop: -4 }}>
+                {porGenero(perfil.genero, perfil.nome, { masculino: 'Ele está', feminino: 'Ela está', neutro: `${perfil.nome} está` })} no grupo <strong>{perfil.grupo_nome}</strong> — o conteúdo abaixo é o mesmo pra todo o grupo.
+              </p>
             )}
 
             {aulasGravadas.length === 0 && planos.length === 0 && tarefasDesignadas.length === 0 && (

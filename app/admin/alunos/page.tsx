@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../../lib/supabaseClient';
 import Cabecalho from '../../../components/Cabecalho';
+import { porGenero } from '../../../lib/genero';
 
-type Aluno = { id: string; nome: string; is_assinante: boolean; is_aluno_particular: boolean; grupo_id: string | null };
+type Aluno = { id: string; nome: string; is_assinante: boolean; is_aluno_particular: boolean; grupo_id: string | null; genero: 'masculino' | 'feminino' | null };
 type AcessoPendente = { email: string; is_assinante: boolean; is_aluno_particular: boolean; grupo_id: string | null; atualizado_em: string };
 type Grupo = { id: string; nome: string };
 type Plano = { id: string; motivo: string; conteudo: string };
@@ -56,7 +57,7 @@ export default function AdminAlunos() {
   async function carregar() {
     const { data } = await supabase
       .from('profiles')
-      .select('id, nome, is_assinante, is_aluno_particular, grupo_id')
+      .select('id, nome, is_assinante, is_aluno_particular, grupo_id, genero')
       .eq('is_admin', false)
       .order('nome');
     setAlunos((data as any) || []);
@@ -293,8 +294,9 @@ export default function AdminAlunos() {
 
             {aluno.grupo_id && (
               <p className="painel-legenda" style={{ marginTop: 8, marginBottom: 0 }}>
-                Este aluno está no grupo <strong>{grupos.find((g) => g.id === aluno.grupo_id)?.nome}</strong> — o plano de aula,
-                as tarefas e as gravações do grupo aparecem pra ele automaticamente.{' '}
+                {porGenero(aluno.genero, aluno.nome, { masculino: 'Este aluno está', feminino: 'Esta aluna está', neutro: `${aluno.nome} está` })} no grupo{' '}
+                <strong>{grupos.find((g) => g.id === aluno.grupo_id)?.nome}</strong> — o plano de aula, as tarefas e as gravações do
+                grupo aparecem {porGenero(aluno.genero, aluno.nome, { masculino: 'pra ele', feminino: 'pra ela', neutro: 'pra essa pessoa' })} automaticamente.{' '}
                 <Link href="/admin/grupos">Gerenciar conteúdo do grupo →</Link>
               </p>
             )}
@@ -308,7 +310,7 @@ export default function AdminAlunos() {
                 {expandido === aluno.id ? 'Fechar' : 'Ver / adicionar conteúdo particular'}
               </button>
               <Link href={`/admin/alunos/${aluno.id}`} className="botao fantasma" style={{ fontSize: 12, padding: '4px 10px' }}>
-                Visualizar página dela →
+                {porGenero(aluno.genero, aluno.nome, { masculino: 'Visualizar página dele', feminino: 'Visualizar página dela', neutro: 'Visualizar página' })} →
               </Link>
             </div>
 
