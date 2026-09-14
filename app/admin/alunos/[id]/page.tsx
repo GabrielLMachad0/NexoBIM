@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { supabase } from '../../../../lib/supabaseClient';
 import Cabecalho from '../../../../components/Cabecalho';
 import AnelProgresso from '../../../../components/AnelProgresso';
+import { comLinksClicaveis } from '../../../../lib/linkify';
 
 type Aula = { id: string; ordem: number };
 type TarefaPadrao = { id: string };
@@ -156,7 +157,7 @@ export default function PreviewAluno() {
               <div className="painel" key={p.id}>
                 <p className="painel-titulo">Plano de aula</p>
                 <p className="painel-legenda">Sobre: {p.motivo}</p>
-                <p style={{ fontSize: 14, whiteSpace: 'pre-wrap' }}>{p.conteudo}</p>
+                <p style={{ fontSize: 14, whiteSpace: 'pre-wrap' }}>{comLinksClicaveis(p.conteudo)}</p>
               </div>
             ))}
 
@@ -164,10 +165,10 @@ export default function PreviewAluno() {
               <div className="painel">
                 <p className="painel-titulo">Suas tarefas</p>
                 {tarefasDesignadas.map((t) => (
-                  <div className="aula-linha" key={t.id}>
+                  <div className="aula-linha" key={t.id} style={{ alignItems: 'flex-start' }}>
                     <div>
                       <div className="aula-titulo">{t.titulo}</div>
-                      <p className="painel-legenda" style={{ margin: 0 }}>{t.descricao}</p>
+                      <p className="painel-legenda" style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{comLinksClicaveis(t.descricao)}</p>
                     </div>
                     <span className={`marcador ${t.status === 'concluida' ? 'feito' : ''}`}>{t.status}</span>
                   </div>
