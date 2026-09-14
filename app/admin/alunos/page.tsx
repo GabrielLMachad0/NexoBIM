@@ -283,7 +283,7 @@ export default function AdminAlunos() {
               </p>
             )}
 
-            <div style={{ marginTop: 12 }}>
+            <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <button
                 className="botao fantasma"
                 style={{ fontSize: 12, padding: '4px 10px' }}
@@ -291,6 +291,9 @@ export default function AdminAlunos() {
               >
                 {expandido === aluno.id ? 'Fechar' : 'Ver / adicionar conteúdo particular'}
               </button>
+              <Link href={`/admin/alunos/${aluno.id}`} className="botao fantasma" style={{ fontSize: 12, padding: '4px 10px' }}>
+                Visualizar página dela →
+              </Link>
             </div>
 
             {expandido === aluno.id && (

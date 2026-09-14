@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { supabase } from '../../../lib/supabaseClient';
 import Cabecalho from '../../../components/Cabecalho';
 
@@ -213,7 +214,10 @@ export default function AdminGrupos() {
                 {membrosDoGrupo.map((m) => (
                   <div className="aula-linha" key={m.id}>
                     <div className="aula-titulo">{m.nome}</div>
-                    <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => removerMembro(m.id, grupo.id)}>Remover do grupo</button>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <Link href={`/admin/alunos/${m.id}`} className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }}>Visualizar página →</Link>
+                      <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => removerMembro(m.id, grupo.id)}>Remover do grupo</button>
+                    </div>
                   </div>
                 ))}
                 <div style={{ display: 'flex', gap: 8, marginTop: 12, alignItems: 'center' }}>
