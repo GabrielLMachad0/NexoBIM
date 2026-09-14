@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { supabase } from '../../../../../../lib/supabaseClient';
 import Cabecalho from '../../../../../../components/Cabecalho';
 import Esqueleto from '../../../../../../components/Esqueleto';
+import PainelPlanoDeEnsino from '../../../../../../components/PainelPlanoDeEnsino';
 
 type Aula = { id: string; titulo: string; descricao: string; youtube_id: string; ordem: number };
 type TarefaPadrao = { id: string; titulo: string; descricao: string };
@@ -28,6 +29,7 @@ export default function PreviewNivel() {
   const [tarefasFeitas, setTarefasFeitas] = useState<Set<string>>(new Set());
   const [certificadoEmitido, setCertificadoEmitido] = useState(false);
   const [aulaSelecionada, setAulaSelecionada] = useState<Aula | null>(null);
+  const [planoEnsino, setPlanoEnsino] = useState<string | null>(null);
 
   useEffect(() => {
     carregar();
@@ -42,7 +44,7 @@ export default function PreviewNivel() {
 
     const alunoId = params.id;
 
-    const [{ data: perfilAluno }, { data: nivelData }, { data: cert }] = await Promise.all([
+    const [{ data: perfilAluno }, { data: nivelData }, { data: cert }, { data: plano }] = await Promise.all([
       supabase.from('profiles').select('nome').eq('id', alunoId).maybeSingle(),
       supabase
         .from('niveis')
@@ -50,12 +52,14 @@ export default function PreviewNivel() {
         .eq('id', params.nivelId)
         .single(),
       supabase.from('certificados').select('codigo').eq('aluno_id', alunoId).eq('nivel_id', params.nivelId).maybeSingle(),
+      supabase.from('planos_padrao').select('conteudo').eq('nivel_id', params.nivelId).maybeSingle(),
     ]);
 
     if (!perfilAluno || !nivelData) { router.push('/admin/alunos'); return; }
     setNomeAluno(perfilAluno.nome);
     setNivel(nivelData as any);
     setCertificadoEmitido(!!cert);
+    setPlanoEnsino(plano?.conteudo || null);
 
     const aulaIds = ((nivelData as any).aulas as Aula[]).map((a) => a.id);
     const tarefaIds = ((nivelData as any).tarefas_padrao as TarefaPadrao[]).map((t) => t.id);
@@ -91,7 +95,9 @@ export default function PreviewNivel() {
         </div>
 
         <p className="painel-legenda" style={{ margin: '4px 0 0' }}>{nivel.cursos.nome}</p>
-        <h1 style={{ fontSize: 20, fontWeight: 500, margin: '2px 0 20px' }}>{nivel.nome}</h1>
+        <h1 style={{ fontSize: 20, fontWeight: 500, margin: '2px 0 16px' }}>{nivel.nome}</h1>
+
+        <PainelPlanoDeEnsino conteudo={planoEnsino} />
 
         {aulaSelecionada ? (
           <div className="painel player-painel">

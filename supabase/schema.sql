@@ -59,6 +59,11 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure handle_new_user();
 
+-- Função só existe pra rodar como trigger — nunca deveria aparecer como
+-- endpoint em /rest/v1/rpc/handle_new_user. Revogar EXECUTE não afeta o
+-- disparo do trigger (isso não depende do EXECUTE de quem fez a alteração).
+revoke execute on function handle_new_user() from public, anon, authenticated;
+
 -- ---------------------------------------------------------------------
 -- 2. Conteúdo padrão (igual para todos os assinantes, organizado por nível)
 -- ---------------------------------------------------------------------
@@ -211,23 +216,26 @@ alter table aulas_particulares_gravadas enable row level security;
 alter table grupos_estudo enable row level security;
 
 -- função auxiliar: o usuário logado é admin (a Raíssa)?
+-- "(select auth.uid())" em vez de "auth.uid()" direto: com o select, o Postgres
+-- avalia isso uma vez por consulta em vez de uma vez por linha (recomendação
+-- oficial do linter de performance do Supabase).
 create function is_admin()
 returns boolean as $$
-  select coalesce((select is_admin from profiles where id = auth.uid()), false);
+  select coalesce((select is_admin from profiles where id = (select auth.uid())), false);
 $$ language sql security definer stable set search_path = public;
 
 -- função auxiliar: qual o grupo de estudo do usuário logado (ou null, se não tiver)
 create function grupo_do_usuario_atual()
 returns uuid as $$
-  select grupo_id from profiles where id = auth.uid();
+  select grupo_id from profiles where id = (select auth.uid());
 $$ language sql security definer stable set search_path = public;
 
 -- acessos pendentes: só a admin gerencia (liberar acesso por e-mail antes do cadastro)
 create policy "admin gerencia acessos pendentes" on acessos_pendentes for all using (is_admin()) with check (is_admin());
 
 -- perfis: cada um vê e edita o próprio; admin vê todos
-create policy "ver proprio perfil" on profiles for select using (id = auth.uid() or is_admin());
-create policy "editar proprio perfil" on profiles for update using (id = auth.uid() or is_admin());
+create policy "ver proprio perfil" on profiles for select using (id = (select auth.uid()) or is_admin());
+create policy "editar proprio perfil" on profiles for update using (id = (select auth.uid()) or is_admin());
 
 -- A policy acima permite update na PRÓPRIA linha, mas não restringe QUAIS
 -- colunas — sem isso, qualquer pessoa logada poderia se dar assinatura, aula
@@ -255,36 +263,54 @@ create trigger trava_colunas_administrativas_do_perfil
   before update on profiles
   for each row execute procedure protege_colunas_administrativas_do_perfil();
 
+-- mesmo raciocínio do handle_new_user(): só existe pra rodar como trigger.
+revoke execute on function protege_colunas_administrativas_do_perfil() from public, anon, authenticated;
+
 -- conteúdo padrão: o catálogo (curso/nível/título da aula) é público de propósito —
 -- vira a página /cursos/[slug] pra atrair gente pelo Google, igual a um índice de
 -- programa de curso. O vídeo em si (assistir, marcar progresso, certificado) continua
 -- exigindo login. Só admin escreve.
+-- Catálogo (cursos/níveis/aulas/planos e tarefas padrão) é lido por qualquer
+-- policy de SELECT dedicada abaixo — por isso a policy de escrita da admin cobre
+-- só insert/update/delete (nunca "for all"): antes era "for all" e coexistia
+-- com a policy pública de select, então toda leitura tinha que avaliar as
+-- duas policies e somar (OR) o resultado — redundante e mais lento à toa.
 create policy "catalogo publico de cursos" on cursos for select using (true);
-create policy "admin escreve cursos" on cursos for all using (is_admin());
+create policy "admin insere cursos" on cursos for insert with check (is_admin());
+create policy "admin atualiza cursos" on cursos for update using (is_admin());
+create policy "admin remove cursos" on cursos for delete using (is_admin());
 
 create policy "catalogo publico de niveis" on niveis for select using (true);
-create policy "admin escreve niveis" on niveis for all using (is_admin());
+create policy "admin insere niveis" on niveis for insert with check (is_admin());
+create policy "admin atualiza niveis" on niveis for update using (is_admin());
+create policy "admin remove niveis" on niveis for delete using (is_admin());
 
 create policy "catalogo publico de aulas" on aulas for select using (true);
-create policy "admin escreve aulas" on aulas for all using (is_admin());
+create policy "admin insere aulas" on aulas for insert with check (is_admin());
+create policy "admin atualiza aulas" on aulas for update using (is_admin());
+create policy "admin remove aulas" on aulas for delete using (is_admin());
 
-create policy "ler planos padrao" on planos_padrao for select using (auth.role() = 'authenticated');
-create policy "admin escreve planos padrao" on planos_padrao for all using (is_admin());
+create policy "ler planos padrao" on planos_padrao for select using ((select auth.role()) = 'authenticated');
+create policy "admin insere planos padrao" on planos_padrao for insert with check (is_admin());
+create policy "admin atualiza planos padrao" on planos_padrao for update using (is_admin());
+create policy "admin remove planos padrao" on planos_padrao for delete using (is_admin());
 
-create policy "ler tarefas padrao" on tarefas_padrao for select using (auth.role() = 'authenticated');
-create policy "admin escreve tarefas padrao" on tarefas_padrao for all using (is_admin());
+create policy "ler tarefas padrao" on tarefas_padrao for select using ((select auth.role()) = 'authenticated');
+create policy "admin insere tarefas padrao" on tarefas_padrao for insert with check (is_admin());
+create policy "admin atualiza tarefas padrao" on tarefas_padrao for update using (is_admin());
+create policy "admin remove tarefas padrao" on tarefas_padrao for delete using (is_admin());
 
 -- progresso e certificados: só o próprio aluno mexe no que é dele
 create policy "progresso aulas do proprio aluno" on progresso_aulas for all
-  using (aluno_id = auth.uid() or is_admin());
+  using (aluno_id = (select auth.uid()) or is_admin());
 
 create policy "progresso tarefas do proprio aluno" on progresso_tarefas for all
-  using (aluno_id = auth.uid() or is_admin());
+  using (aluno_id = (select auth.uid()) or is_admin());
 
 create policy "certificados do proprio aluno" on certificados for select
-  using (aluno_id = auth.uid() or is_admin());
+  using (aluno_id = (select auth.uid()) or is_admin());
 create policy "certificados inseridos pelo proprio aluno" on certificados for insert
-  with check (aluno_id = auth.uid());
+  with check (aluno_id = (select auth.uid()));
 
 -- Consulta pública de certificado por código (usada em /certificado/[codigo]):
 -- devolve só o necessário pra confirmar validade (nome, nível, curso, data),
@@ -307,32 +333,35 @@ $$;
 grant execute on function verificar_certificado(text) to anon, authenticated;
 
 -- grupos de estudo: admin gerencia; cada membro vê o próprio grupo
-create policy "admin gerencia grupos de estudo" on grupos_estudo for all
-  using (is_admin()) with check (is_admin());
+-- (mesma lógica da nota acima: "membro ve o proprio grupo" já cobre a leitura
+-- da admin via "is_admin() or ...", então a policy de escrita não repete SELECT)
+create policy "admin insere grupos de estudo" on grupos_estudo for insert with check (is_admin());
+create policy "admin atualiza grupos de estudo" on grupos_estudo for update using (is_admin());
+create policy "admin remove grupos de estudo" on grupos_estudo for delete using (is_admin());
 create policy "membro ve o proprio grupo" on grupos_estudo for select
   using (
     is_admin()
-    or exists (select 1 from profiles where profiles.id = auth.uid() and profiles.grupo_id = grupos_estudo.id)
+    or exists (select 1 from profiles where profiles.id = (select auth.uid()) and profiles.grupo_id = grupos_estudo.id)
   );
 
 -- conteúdo personalizado: o aluno dono lê (ou, se for conteúdo de grupo, quem
 -- estiver no mesmo grupo); só admin escreve
 create policy "ler proprio plano personalizado" on planos_personalizados for select
-  using (aluno_id = auth.uid() or grupo_id = grupo_do_usuario_atual() or is_admin());
+  using (aluno_id = (select auth.uid()) or grupo_id = grupo_do_usuario_atual() or is_admin());
 create policy "admin escreve planos personalizados" on planos_personalizados for insert with check (is_admin());
 create policy "admin atualiza planos personalizados" on planos_personalizados for update using (is_admin());
 
 create policy "ler proprias tarefas designadas" on tarefas_designadas for select
-  using (aluno_id = auth.uid() or grupo_id = grupo_do_usuario_atual() or is_admin());
+  using (aluno_id = (select auth.uid()) or grupo_id = grupo_do_usuario_atual() or is_admin());
 create policy "aluno atualiza status da propria tarefa" on tarefas_designadas for update
-  using (aluno_id = auth.uid() or grupo_id = grupo_do_usuario_atual() or is_admin());
+  using (aluno_id = (select auth.uid()) or grupo_id = grupo_do_usuario_atual() or is_admin());
 create policy "admin cria tarefas designadas" on tarefas_designadas for insert with check (is_admin());
 
 -- a linha mais importante do arquivo inteiro: a aula particular gravada só
 -- pode ser lida por quem é o dono (aluno_id = auth.uid()), por quem está no
 -- mesmo grupo (se for conteúdo de grupo) ou pela admin
 create policy "so o dono ve a propria aula gravada" on aulas_particulares_gravadas for select
-  using (aluno_id = auth.uid() or grupo_id = grupo_do_usuario_atual() or is_admin());
+  using (aluno_id = (select auth.uid()) or grupo_id = grupo_do_usuario_atual() or is_admin());
 
 -- admin também pode remover conteúdo particular cadastrado por engano
 create policy "admin remove planos personalizados" on planos_personalizados for delete using (is_admin());
@@ -384,6 +413,28 @@ $$;
 
 grant execute on function incrementar_clique_recurso(uuid) to authenticated;
 create policy "admin adiciona aula gravada" on aulas_particulares_gravadas for insert with check (is_admin());
+
+-- ---------------------------------------------------------------------
+-- 9. Índices em chave estrangeira — sem eles, toda consulta que filtra por
+-- essas colunas (aulas de um nível, tarefas de um aluno...) faz varredura
+-- completa da tabela em vez de usar índice.
+-- ---------------------------------------------------------------------
+create index if not exists idx_acessos_pendentes_grupo_id on acessos_pendentes(grupo_id);
+create index if not exists idx_aulas_nivel_id on aulas(nivel_id);
+create index if not exists idx_aulas_particulares_gravadas_aluno_id on aulas_particulares_gravadas(aluno_id);
+create index if not exists idx_aulas_particulares_gravadas_grupo_id on aulas_particulares_gravadas(grupo_id);
+create index if not exists idx_certificados_nivel_id on certificados(nivel_id);
+create index if not exists idx_niveis_curso_id on niveis(curso_id);
+create index if not exists idx_planos_padrao_nivel_id on planos_padrao(nivel_id);
+create index if not exists idx_planos_personalizados_aluno_id on planos_personalizados(aluno_id);
+create index if not exists idx_planos_personalizados_grupo_id on planos_personalizados(grupo_id);
+create index if not exists idx_profiles_grupo_id on profiles(grupo_id);
+create index if not exists idx_progresso_aulas_aula_id on progresso_aulas(aula_id);
+create index if not exists idx_progresso_tarefas_tarefa_padrao_id on progresso_tarefas(tarefa_padrao_id);
+create index if not exists idx_tarefas_designadas_aluno_id on tarefas_designadas(aluno_id);
+create index if not exists idx_tarefas_designadas_grupo_id on tarefas_designadas(grupo_id);
+create index if not exists idx_tarefas_designadas_tarefa_padrao_id on tarefas_designadas(tarefa_padrao_id);
+create index if not exists idx_tarefas_padrao_nivel_id on tarefas_padrao(nivel_id);
 
 -- Histórico das verificações de link do acervo de recursos (manual ou agendada) —
 -- antes só existia enquanto o admin tinha a aba aberta, sem registro nenhum.

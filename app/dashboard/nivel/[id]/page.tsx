@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { supabase } from '../../../../lib/supabaseClient';
 import Cabecalho from '../../../../components/Cabecalho';
 import Esqueleto from '../../../../components/Esqueleto';
+import PainelPlanoDeEnsino from '../../../../components/PainelPlanoDeEnsino';
 
 type Aula = { id: string; titulo: string; descricao: string; youtube_id: string; ordem: number };
 type TarefaPadrao = { id: string; titulo: string; descricao: string };
@@ -46,6 +47,7 @@ export default function NivelPage() {
   const [certificadoEmitido, setCertificadoEmitido] = useState(false);
   const [codigoCertificado, setCodigoCertificado] = useState<string | null>(null);
   const [aulaSelecionada, setAulaSelecionada] = useState<Aula | null>(null);
+  const [planoEnsino, setPlanoEnsino] = useState<string | null>(null);
 
   useEffect(() => {
     carregar();
@@ -60,7 +62,7 @@ export default function NivelPage() {
     const userId = sessao.session.user.id;
 
     // Perfil, nível e certificado não dependem um do outro — buscam em paralelo.
-    const [{ data: perfilData }, { data: nivelData }, { data: cert }] = await Promise.all([
+    const [{ data: perfilData }, { data: nivelData }, { data: cert }, { data: plano }] = await Promise.all([
       supabase.from('profiles').select('nome, is_assinante, is_admin').eq('id', userId).single(),
       supabase
         .from('niveis')
@@ -68,7 +70,9 @@ export default function NivelPage() {
         .eq('id', params.id)
         .single(),
       supabase.from('certificados').select('codigo').eq('aluno_id', userId).eq('nivel_id', params.id).maybeSingle(),
+      supabase.from('planos_padrao').select('conteudo').eq('nivel_id', params.id).maybeSingle(),
     ]);
+    setPlanoEnsino(plano?.conteudo || null);
 
     if (!perfilData?.is_assinante) {
       router.push('/dashboard');
@@ -230,7 +234,9 @@ export default function NivelPage() {
       <div className="envolucro envolucro-nivel">
         <Link href="/dashboard" className="voltar-link">← Meus cursos</Link>
         <p className="painel-legenda" style={{ margin: '4px 0 0' }}>{nivel.cursos.nome}</p>
-        <h1 style={{ fontSize: 20, fontWeight: 500, margin: '2px 0 20px' }}>{nivel.nome}</h1>
+        <h1 style={{ fontSize: 20, fontWeight: 500, margin: '2px 0 16px' }}>{nivel.nome}</h1>
+
+        <PainelPlanoDeEnsino conteudo={planoEnsino} />
 
         {aulaSelecionada ? (
           <div className="painel player-painel">

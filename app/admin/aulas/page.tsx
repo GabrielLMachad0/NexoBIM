@@ -11,6 +11,7 @@ type Aula = { id: string; titulo: string; youtube_id: string; ordem: number; des
 type TarefaPadrao = { id: string; titulo: string; descricao: string };
 type Nivel = { id: string; nome: string; curso_id: string; aulas: Aula[]; tarefas_padrao: TarefaPadrao[] };
 type Curso = { id: string; nome: string; niveis: Nivel[] };
+type PlanoPadrao = { id: string; nivel_id: string; conteudo: string };
 
 function extrairYoutubeId(entrada: string): string {
   const linkado = entrada.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/);
@@ -39,6 +40,10 @@ export default function AdminAulas() {
   const [edTituloTarefa, setEdTituloTarefa] = useState('');
   const [edDescricaoTarefa, setEdDescricaoTarefa] = useState('');
 
+  const [planosPadrao, setPlanosPadrao] = useState<PlanoPadrao[]>([]);
+  const [nivelPlanoAberto, setNivelPlanoAberto] = useState<string | null>(null);
+  const [textoPlano, setTextoPlano] = useState('');
+
   useEffect(() => {
     guardaEcarrega();
   }, []);
@@ -53,11 +58,31 @@ export default function AdminAulas() {
   }
 
   async function carregar() {
-    const { data } = await supabase
-      .from('cursos')
-      .select('id, nome, niveis(id, nome, curso_id, aulas(id, titulo, descricao, youtube_id, ordem), tarefas_padrao(id, titulo, descricao))')
-      .order('ordem');
+    const [{ data }, { data: planos }] = await Promise.all([
+      supabase
+        .from('cursos')
+        .select('id, nome, niveis(id, nome, curso_id, aulas(id, titulo, descricao, youtube_id, ordem), tarefas_padrao(id, titulo, descricao))')
+        .order('ordem'),
+      supabase.from('planos_padrao').select('id, nivel_id, conteudo'),
+    ]);
     setCursos((data as any) || []);
+    setPlanosPadrao((planos as any) || []);
+  }
+
+  function abrirEdicaoPlano(nivelId: string) {
+    setNivelPlanoAberto(nivelPlanoAberto === nivelId ? null : nivelId);
+    setTextoPlano(planosPadrao.find((p) => p.nivel_id === nivelId)?.conteudo || '');
+  }
+
+  async function salvarPlanoPadrao(nivelId: string) {
+    const existente = planosPadrao.find((p) => p.nivel_id === nivelId);
+    const { error } = existente
+      ? await supabase.from('planos_padrao').update({ conteudo: textoPlano }).eq('id', existente.id)
+      : await supabase.from('planos_padrao').insert({ nivel_id: nivelId, conteudo: textoPlano });
+    if (error) { setMensagem(`Não deu para salvar o plano de ensino: ${error.message}`); return; }
+    setMensagem('Plano de ensino salvo.');
+    setNivelPlanoAberto(null);
+    carregar();
   }
 
   async function adicionarAula(e: React.FormEvent) {
@@ -195,7 +220,27 @@ export default function AdminAulas() {
             <p className="painel-titulo">{curso.nome}</p>
             {curso.niveis.map((nivel) => (
               <div key={nivel.id} style={{ marginTop: 12 }}>
-                <p style={{ fontSize: 14, fontWeight: 500, margin: '8px 0 4px' }}>{nivel.nome}</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+                  <p style={{ fontSize: 14, fontWeight: 500, margin: '8px 0 4px' }}>{nivel.nome}</p>
+                  <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => abrirEdicaoPlano(nivel.id)}>
+                    {planosPadrao.find((p) => p.nivel_id === nivel.id) ? 'Editar plano de ensino' : 'Adicionar plano de ensino'}
+                  </button>
+                </div>
+                {nivelPlanoAberto === nivel.id && (
+                  <div style={{ marginBottom: 12 }}>
+                    <textarea
+                      className="campo"
+                      rows={4}
+                      placeholder="O que este nível cobre — currículo padrão mostrado a todo assinante nesse nível."
+                      value={textoPlano}
+                      onChange={(e) => setTextoPlano(e.target.value)}
+                    />
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button className="botao" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => salvarPlanoPadrao(nivel.id)}>Salvar plano</button>
+                      <button className="botao fantasma" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => setNivelPlanoAberto(null)}>Cancelar</button>
+                    </div>
+                  </div>
+                )}
                 {[...nivel.aulas].sort((a, b) => a.ordem - b.ordem).map((a, indice) =>
                   aulaEditandoId === a.id ? (
                     <div className="aula-linha" key={a.id} style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
