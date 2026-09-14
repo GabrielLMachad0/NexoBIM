@@ -43,8 +43,25 @@ export default async function PaginaCurso({ params }: { params: { slug: string }
   const niveis = [...curso.niveis].sort((a, b) => a.ordem - b.ordem);
   const totalAulas = niveis.reduce((soma, n) => soma + n.aulas.length, 0);
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Course',
+    name: curso.nome,
+    description: `Aprenda ${curso.nome} na NexoBIM: vídeo aulas por nível, tarefas práticas e certificado ao concluir.`,
+    provider: {
+      '@type': 'Organization',
+      name: 'NexoBIM',
+      sameAs: 'https://nexobimbr.vercel.app',
+    },
+    hasCourseInstance: {
+      '@type': 'CourseInstance',
+      courseMode: 'online',
+    },
+  };
+
   return (
     <div>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <header className="topo">
         <a className="marca" href="/">
           <Image src="/logo-nexobim-topo.png" alt="NexoBIM" width={80} height={22} priority />

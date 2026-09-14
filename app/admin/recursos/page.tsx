@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
 import Cabecalho from '../../../components/Cabecalho';
+import Aviso from '../../../components/Aviso';
 import Esqueleto from '../../../components/Esqueleto';
 
 type Recurso = {
@@ -196,6 +197,7 @@ export default function AdminRecursos() {
   return (
     <div>
       <Cabecalho ehAdmin />
+      <Aviso texto={mensagem} />
       <div className="envolucro">
         <h1 style={{ fontSize: 20, fontWeight: 500 }}>Acervo de recursos</h1>
         <p className="painel-legenda">Links do Google Drive para famílias e projetos de Revit, disponíveis pra qualquer aluno logado.</p>
@@ -218,7 +220,6 @@ export default function AdminRecursos() {
             <input className="campo" placeholder="https://drive.google.com/..." value={linkDrive} onChange={(e) => setLinkDrive(e.target.value)} />
             <button className="botao" type="submit">Adicionar</button>
           </form>
-          {mensagem && <p className="painel-legenda">{mensagem}</p>}
         </div>
 
         <div className="painel">

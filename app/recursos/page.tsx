@@ -102,7 +102,7 @@ export default function Recursos() {
                   >
                     {thumbnail && (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={thumbnail} alt="" className="thumbnail-recurso" loading="lazy" />
+                      <img src={thumbnail} alt={recurso.nome} className="thumbnail-recurso" loading="lazy" />
                     )}
                     <p className="painel-titulo">{recurso.nome}</p>
                     <p className="painel-legenda" style={{ margin: 0 }}>{recurso.categoria}</p>
@@ -137,7 +137,7 @@ export default function Recursos() {
                       >
                         {thumbnail && (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={thumbnail} alt="" className="thumbnail-recurso" loading="lazy" />
+                          <img src={thumbnail} alt={recurso.nome} className="thumbnail-recurso" loading="lazy" />
                         )}
                         <p className="painel-titulo">{recurso.nome}</p>
                         <p className="painel-legenda" style={{ margin: 0 }}>{recurso.categoria}</p>

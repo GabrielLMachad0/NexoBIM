@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
 import Cabecalho from '../../../components/Cabecalho';
+import Aviso from '../../../components/Aviso';
 import Esqueleto from '../../../components/Esqueleto';
 
 type Aula = { id: string; titulo: string; youtube_id: string; ordem: number; descricao: string };
@@ -63,13 +64,14 @@ export default function AdminAulas() {
     e.preventDefault();
     if (!nivelEscolhido || !tituloAula || !linkVideo) return;
     const nivel = cursos.flatMap((c) => c.niveis).find((n) => n.id === nivelEscolhido);
-    await supabase.from('aulas').insert({
+    const { error } = await supabase.from('aulas').insert({
       nivel_id: nivelEscolhido,
       titulo: tituloAula,
       descricao: descricaoAula,
       youtube_id: extrairYoutubeId(linkVideo),
       ordem: (nivel?.aulas.length || 0) + 1,
     });
+    if (error) { setMensagem(`Não deu para adicionar a aula: ${error.message}`); return; }
     setTituloAula('');
     setLinkVideo('');
     setDescricaoAula('');
@@ -80,11 +82,12 @@ export default function AdminAulas() {
   async function adicionarTarefa(e: React.FormEvent) {
     e.preventDefault();
     if (!nivelEscolhido || !tituloTarefa) return;
-    await supabase.from('tarefas_padrao').insert({
+    const { error } = await supabase.from('tarefas_padrao').insert({
       nivel_id: nivelEscolhido,
       titulo: tituloTarefa,
       descricao: descricaoTarefa,
     });
+    if (error) { setMensagem(`Não deu para adicionar a tarefa: ${error.message}`); return; }
     setTituloTarefa('');
     setDescricaoTarefa('');
     setMensagem('Tarefa adicionada.');
@@ -99,18 +102,20 @@ export default function AdminAulas() {
   }
 
   async function salvarAula(id: string) {
-    await supabase.from('aulas').update({
+    const { error } = await supabase.from('aulas').update({
       titulo: edTitulo,
       descricao: edDescricao,
       youtube_id: extrairYoutubeId(edLink),
     }).eq('id', id);
+    if (error) { setMensagem(`Não deu para salvar a aula: ${error.message}`); return; }
     setAulaEditandoId(null);
     carregar();
   }
 
   async function removerAula(id: string, titulo: string) {
     if (!window.confirm(`Remover a aula "${titulo}"? Isso também apaga o progresso dos alunos nela.`)) return;
-    await supabase.from('aulas').delete().eq('id', id);
+    const { error } = await supabase.from('aulas').delete().eq('id', id);
+    if (error) { setMensagem(`Não deu para remover a aula: ${error.message}`); return; }
     carregar();
   }
 
@@ -119,10 +124,12 @@ export default function AdminAulas() {
     const indice = ordenadas.findIndex((a) => a.id === aula.id);
     const vizinho = ordenadas[indice + direcao];
     if (!vizinho) return;
-    await Promise.all([
+    const resultados = await Promise.all([
       supabase.from('aulas').update({ ordem: vizinho.ordem }).eq('id', aula.id),
       supabase.from('aulas').update({ ordem: aula.ordem }).eq('id', vizinho.id),
     ]);
+    const erro = resultados.find((r) => r.error);
+    if (erro?.error) { setMensagem(`Não deu para reordenar: ${erro.error.message}`); return; }
     carregar();
   }
 
@@ -133,14 +140,16 @@ export default function AdminAulas() {
   }
 
   async function salvarTarefa(id: string) {
-    await supabase.from('tarefas_padrao').update({ titulo: edTituloTarefa, descricao: edDescricaoTarefa }).eq('id', id);
+    const { error } = await supabase.from('tarefas_padrao').update({ titulo: edTituloTarefa, descricao: edDescricaoTarefa }).eq('id', id);
+    if (error) { setMensagem(`Não deu para salvar a tarefa: ${error.message}`); return; }
     setTarefaEditandoId(null);
     carregar();
   }
 
   async function removerTarefa(id: string, titulo: string) {
     if (!window.confirm(`Remover a tarefa "${titulo}"?`)) return;
-    await supabase.from('tarefas_padrao').delete().eq('id', id);
+    const { error } = await supabase.from('tarefas_padrao').delete().eq('id', id);
+    if (error) { setMensagem(`Não deu para remover a tarefa: ${error.message}`); return; }
     carregar();
   }
 
@@ -151,6 +160,7 @@ export default function AdminAulas() {
   return (
     <div>
       <Cabecalho ehAdmin />
+      <Aviso texto={mensagem} />
       <div className="envolucro">
         <h1 style={{ fontSize: 20, fontWeight: 500 }}>Aulas e tarefas</h1>
 
@@ -178,7 +188,6 @@ export default function AdminAulas() {
             <button className="botao" type="submit">Adicionar tarefa</button>
           </form>
 
-          {mensagem && <p className="painel-legenda">{mensagem}</p>}
         </div>
 
         {cursos.map((curso) => (

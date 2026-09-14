@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 import Cabecalho from '../../components/Cabecalho';
+import Aviso from '../../components/Aviso';
 import Esqueleto from '../../components/Esqueleto';
 
 type Curso = { id: string; nome: string };
@@ -68,7 +69,8 @@ export default function AdminHome() {
   async function criarCurso(e: React.FormEvent) {
     e.preventDefault();
     if (!novoCurso) return;
-    await supabase.from('cursos').insert({ nome: novoCurso, slug: slugificar(novoCurso), ordem: cursos.length });
+    const { error } = await supabase.from('cursos').insert({ nome: novoCurso, slug: slugificar(novoCurso), ordem: cursos.length });
+    if (error) { setMensagem(`Não deu para criar o curso: ${error.message}`); return; }
     setNovoCurso('');
     setMensagem('Curso criado.');
     carregarCursos();
@@ -81,7 +83,8 @@ export default function AdminHome() {
       .from('niveis')
       .select('id', { count: 'exact', head: true })
       .eq('curso_id', cursoParaNivel);
-    await supabase.from('niveis').insert({ curso_id: cursoParaNivel, nome: novoNivel, ordem: (count || 0) + 1 });
+    const { error } = await supabase.from('niveis').insert({ curso_id: cursoParaNivel, nome: novoNivel, ordem: (count || 0) + 1 });
+    if (error) { setMensagem(`Não deu para criar o nível: ${error.message}`); return; }
     setNovoNivel('');
     setMensagem('Nível criado.');
   }
@@ -91,6 +94,7 @@ export default function AdminHome() {
   return (
     <div>
       <Cabecalho ehAdmin />
+      <Aviso texto={mensagem} />
       <div className="envolucro">
         <h1 style={{ fontSize: 20, fontWeight: 500 }}>Administração</h1>
 
@@ -153,7 +157,6 @@ export default function AdminHome() {
           </form>
         </div>
 
-        {mensagem && <p className="painel-legenda">{mensagem}</p>}
       </div>
     </div>
   );

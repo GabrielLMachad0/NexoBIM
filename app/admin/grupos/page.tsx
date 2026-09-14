@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../../lib/supabaseClient';
 import Cabecalho from '../../../components/Cabecalho';
+import Aviso from '../../../components/Aviso';
 import Esqueleto from '../../../components/Esqueleto';
 
 type Grupo = { id: string; nome: string; criado_em: string };
@@ -73,7 +74,8 @@ export default function AdminGrupos() {
   async function criarGrupo(e: React.FormEvent) {
     e.preventDefault();
     if (!nomeGrupo.trim()) return;
-    await supabase.from('grupos_estudo').insert({ nome: nomeGrupo.trim() });
+    const { error } = await supabase.from('grupos_estudo').insert({ nome: nomeGrupo.trim() });
+    if (error) { setMensagem(`Não deu para criar o grupo: ${error.message}`); return; }
     setNomeGrupo('');
     setMensagem('Grupo criado.');
     carregarGrupos();
@@ -81,7 +83,8 @@ export default function AdminGrupos() {
 
   async function removerGrupo(id: string, nome: string) {
     if (!window.confirm(`Remover o grupo "${nome}"? Isso apaga o plano, as tarefas e as gravações do grupo — as alunas voltam a não ter grupo.`)) return;
-    await supabase.from('grupos_estudo').delete().eq('id', id);
+    const { error } = await supabase.from('grupos_estudo').delete().eq('id', id);
+    if (error) { setMensagem(`Não deu para remover o grupo: ${error.message}`); return; }
     if (expandido === id) setExpandido(null);
     carregarGrupos();
   }
@@ -112,14 +115,16 @@ export default function AdminGrupos() {
 
   async function adicionarMembro(grupoId: string) {
     if (!membroParaAdicionar) return;
-    await supabase.from('profiles').update({ grupo_id: grupoId }).eq('id', membroParaAdicionar);
+    const { error } = await supabase.from('profiles').update({ grupo_id: grupoId }).eq('id', membroParaAdicionar);
+    if (error) { setMensagem(`Não deu para adicionar ao grupo: ${error.message}`); return; }
     setMembroParaAdicionar('');
     carregarConteudoDoGrupo(grupoId);
     carregarAlunosParticulares();
   }
 
   async function removerMembro(alunoId: string, grupoId: string) {
-    await supabase.from('profiles').update({ grupo_id: null }).eq('id', alunoId);
+    const { error } = await supabase.from('profiles').update({ grupo_id: null }).eq('id', alunoId);
+    if (error) { setMensagem(`Não deu para remover do grupo: ${error.message}`); return; }
     carregarConteudoDoGrupo(grupoId);
     carregarAlunosParticulares();
   }
@@ -137,11 +142,10 @@ export default function AdminGrupos() {
   async function salvarPlano(grupoId: string) {
     if (!motivo || !conteudoPlano) return;
     const dados = { motivo, conteudo: conteudoPlano, aula_rotulo: rotuloPlano.trim() || null };
-    if (editandoPlanoId) {
-      await supabase.from('planos_personalizados').update(dados).eq('id', editandoPlanoId);
-    } else {
-      await supabase.from('planos_personalizados').insert({ grupo_id: grupoId, ...dados });
-    }
+    const { error } = editandoPlanoId
+      ? await supabase.from('planos_personalizados').update(dados).eq('id', editandoPlanoId)
+      : await supabase.from('planos_personalizados').insert({ grupo_id: grupoId, ...dados });
+    if (error) { setMensagem(`Não deu para salvar o plano: ${error.message}`); return; }
     cancelarEdicaoPlano();
     carregarConteudoDoGrupo(grupoId);
   }
@@ -159,11 +163,10 @@ export default function AdminGrupos() {
   async function salvarTarefa(grupoId: string) {
     if (!tituloTarefa) return;
     const dados = { titulo: tituloTarefa, descricao: descricaoTarefa, prazo: prazoTarefa || null, aula_rotulo: rotuloTarefa.trim() || null };
-    if (editandoTarefaId) {
-      await supabase.from('tarefas_designadas').update(dados).eq('id', editandoTarefaId);
-    } else {
-      await supabase.from('tarefas_designadas').insert({ grupo_id: grupoId, ...dados });
-    }
+    const { error } = editandoTarefaId
+      ? await supabase.from('tarefas_designadas').update(dados).eq('id', editandoTarefaId)
+      : await supabase.from('tarefas_designadas').insert({ grupo_id: grupoId, ...dados });
+    if (error) { setMensagem(`Não deu para salvar a tarefa: ${error.message}`); return; }
     cancelarEdicaoTarefa();
     carregarConteudoDoGrupo(grupoId);
   }
@@ -181,11 +184,10 @@ export default function AdminGrupos() {
   async function salvarGravacao(grupoId: string) {
     if (!tituloGravacao || !linkGravacao) return;
     const dados = { titulo: tituloGravacao, video_url: linkGravacao, aula_rotulo: rotuloGravacao.trim() || null };
-    if (editandoGravacaoId) {
-      await supabase.from('aulas_particulares_gravadas').update(dados).eq('id', editandoGravacaoId);
-    } else {
-      await supabase.from('aulas_particulares_gravadas').insert({ grupo_id: grupoId, ...dados });
-    }
+    const { error } = editandoGravacaoId
+      ? await supabase.from('aulas_particulares_gravadas').update(dados).eq('id', editandoGravacaoId)
+      : await supabase.from('aulas_particulares_gravadas').insert({ grupo_id: grupoId, ...dados });
+    if (error) { setMensagem(`Não deu para salvar a gravação: ${error.message}`); return; }
     cancelarEdicaoGravacao();
     carregarConteudoDoGrupo(grupoId);
   }
@@ -215,6 +217,7 @@ export default function AdminGrupos() {
   return (
     <div>
       <Cabecalho ehAdmin />
+      <Aviso texto={mensagem} />
       <div className="envolucro">
         <h1 style={{ fontSize: 20, fontWeight: 500 }}>Grupos de estudo</h1>
         <p className="painel-legenda">
@@ -228,7 +231,6 @@ export default function AdminGrupos() {
             <input className="campo" placeholder="Nome do grupo (ex.: Turma de terça 19h)" value={nomeGrupo} onChange={(e) => setNomeGrupo(e.target.value)} />
             <button className="botao" type="submit">Criar grupo</button>
           </form>
-          {mensagem && <p className="painel-legenda" style={{ marginTop: 12, marginBottom: 0 }}>{mensagem}</p>}
         </div>
 
         {grupos.length === 0 && (

@@ -80,7 +80,7 @@ export default function CategoriaRecursos() {
                   >
                     {thumbnail && (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={thumbnail} alt="" className="thumbnail-recurso" loading="lazy" />
+                      <img src={thumbnail} alt={recurso.nome} className="thumbnail-recurso" loading="lazy" />
                     )}
                     <p className="painel-titulo">{recurso.nome}</p>
                     {recurso.descricao && <p className="painel-legenda" style={{ margin: 0 }}>{recurso.descricao}</p>}

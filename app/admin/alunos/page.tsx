@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../../lib/supabaseClient';
 import Cabecalho from '../../../components/Cabecalho';
+import Aviso from '../../../components/Aviso';
 import { porGenero } from '../../../lib/genero';
 import Esqueleto from '../../../components/Esqueleto';
 
@@ -19,6 +20,7 @@ export default function AdminAlunos() {
   const router = useRouter();
   const [carregando, setCarregando] = useState(true);
   const [alunos, setAlunos] = useState<Aluno[]>([]);
+  const [busca, setBusca] = useState('');
   const [grupos, setGrupos] = useState<Grupo[]>([]);
   const [pendentes, setPendentes] = useState<AcessoPendente[]>([]);
   const [expandido, setExpandido] = useState<string | null>(null);
@@ -76,7 +78,8 @@ export default function AdminAlunos() {
   }
 
   async function alterarGrupoDoAluno(alunoId: string, grupoId: string) {
-    await supabase.from('profiles').update({ grupo_id: grupoId || null }).eq('id', alunoId);
+    const { error } = await supabase.from('profiles').update({ grupo_id: grupoId || null }).eq('id', alunoId);
+    if (error) { setMensagem(`Não deu para trocar o grupo: ${error.message}`); return; }
     carregar();
   }
 
@@ -119,11 +122,15 @@ export default function AdminAlunos() {
       .maybeSingle();
 
     if (perfilExistente) {
-      await supabase.from('profiles').update({
+      const { error } = await supabase.from('profiles').update({
         is_assinante: assinanteConvite || perfilExistente.is_assinante,
         is_aluno_particular: particularConvite || perfilExistente.is_aluno_particular,
         ...(grupoConvite ? { grupo_id: grupoConvite } : {}),
       }).eq('id', perfilExistente.id);
+      if (error) {
+        setMensagemConvite(`Não deu para liberar o acesso de ${email}: ${error.message}`);
+        return;
+      }
       setMensagemConvite(`${email} já tinha conta — acesso liberado, já pode entrar.`);
       carregar();
     } else {
@@ -133,13 +140,17 @@ export default function AdminAlunos() {
         .eq('email', email)
         .maybeSingle();
 
-      await supabase.from('acessos_pendentes').upsert({
+      const { error } = await supabase.from('acessos_pendentes').upsert({
         email,
         is_assinante: assinanteConvite || pendenteExistente?.is_assinante || false,
         is_aluno_particular: particularConvite || pendenteExistente?.is_aluno_particular || false,
         grupo_id: grupoConvite || pendenteExistente?.grupo_id || null,
         atualizado_em: new Date().toISOString(),
       });
+      if (error) {
+        setMensagemConvite(`Não deu para reservar o acesso de ${email}: ${error.message}`);
+        return;
+      }
       setMensagemConvite(`Acesso reservado para ${email} — quando essa pessoa criar a conta com esse e-mail em /login, o acesso é liberado na hora.`);
       carregarPendentes();
     }
@@ -153,7 +164,8 @@ export default function AdminAlunos() {
   }
 
   async function alternarFlag(aluno: Aluno, campo: 'is_assinante' | 'is_aluno_particular') {
-    await supabase.from('profiles').update({ [campo]: !aluno[campo] }).eq('id', aluno.id);
+    const { error } = await supabase.from('profiles').update({ [campo]: !aluno[campo] }).eq('id', aluno.id);
+    if (error) { setMensagem(`Não deu para atualizar: ${error.message}`); return; }
     carregar();
   }
 
@@ -191,13 +203,11 @@ export default function AdminAlunos() {
   async function salvarPlano(alunoId: string) {
     if (!motivo || !conteudoPlano) return;
     const dados = { motivo, conteudo: conteudoPlano, aula_rotulo: rotuloPlano.trim() || null };
-    if (editandoPlanoId) {
-      await supabase.from('planos_personalizados').update(dados).eq('id', editandoPlanoId);
-      setMensagem('Plano de aula atualizado.');
-    } else {
-      await supabase.from('planos_personalizados').insert({ aluno_id: alunoId, ...dados });
-      setMensagem('Plano de aula adicionado.');
-    }
+    const { error } = editandoPlanoId
+      ? await supabase.from('planos_personalizados').update(dados).eq('id', editandoPlanoId)
+      : await supabase.from('planos_personalizados').insert({ aluno_id: alunoId, ...dados });
+    if (error) { setMensagem(`Não deu para salvar o plano: ${error.message}`); return; }
+    setMensagem(editandoPlanoId ? 'Plano de aula atualizado.' : 'Plano de aula adicionado.');
     cancelarEdicaoPlano();
     carregarConteudoDoAluno(alunoId);
   }
@@ -215,13 +225,11 @@ export default function AdminAlunos() {
   async function salvarTarefa(alunoId: string) {
     if (!tituloTarefa) return;
     const dados = { titulo: tituloTarefa, descricao: descricaoTarefa, prazo: prazoTarefa || null, aula_rotulo: rotuloTarefa.trim() || null };
-    if (editandoTarefaId) {
-      await supabase.from('tarefas_designadas').update(dados).eq('id', editandoTarefaId);
-      setMensagem('Tarefa atualizada.');
-    } else {
-      await supabase.from('tarefas_designadas').insert({ aluno_id: alunoId, ...dados });
-      setMensagem('Tarefa designada.');
-    }
+    const { error } = editandoTarefaId
+      ? await supabase.from('tarefas_designadas').update(dados).eq('id', editandoTarefaId)
+      : await supabase.from('tarefas_designadas').insert({ aluno_id: alunoId, ...dados });
+    if (error) { setMensagem(`Não deu para salvar a tarefa: ${error.message}`); return; }
+    setMensagem(editandoTarefaId ? 'Tarefa atualizada.' : 'Tarefa designada.');
     cancelarEdicaoTarefa();
     carregarConteudoDoAluno(alunoId);
   }
@@ -239,13 +247,11 @@ export default function AdminAlunos() {
   async function salvarGravacao(alunoId: string) {
     if (!tituloGravacao || !linkGravacao) return;
     const dados = { titulo: tituloGravacao, video_url: linkGravacao, aula_rotulo: rotuloGravacao.trim() || null };
-    if (editandoGravacaoId) {
-      await supabase.from('aulas_particulares_gravadas').update(dados).eq('id', editandoGravacaoId);
-      setMensagem('Gravação atualizada.');
-    } else {
-      await supabase.from('aulas_particulares_gravadas').insert({ aluno_id: alunoId, ...dados });
-      setMensagem('Gravação vinculada — só esse aluno vai conseguir ver.');
-    }
+    const { error } = editandoGravacaoId
+      ? await supabase.from('aulas_particulares_gravadas').update(dados).eq('id', editandoGravacaoId)
+      : await supabase.from('aulas_particulares_gravadas').insert({ aluno_id: alunoId, ...dados });
+    if (error) { setMensagem(`Não deu para salvar a gravação: ${error.message}`); return; }
+    setMensagem(editandoGravacaoId ? 'Gravação atualizada.' : 'Gravação vinculada — só esse aluno vai conseguir ver.');
     cancelarEdicaoGravacao();
     carregarConteudoDoAluno(alunoId);
   }
@@ -268,11 +274,16 @@ export default function AdminAlunos() {
     carregarConteudoDoAluno(alunoId);
   }
 
+  const alunosFiltrados = busca.trim()
+    ? alunos.filter((a) => a.nome.toLowerCase().includes(busca.trim().toLowerCase()))
+    : alunos;
+
   if (carregando) return <Esqueleto />;
 
   return (
     <div>
       <Cabecalho ehAdmin />
+      <Aviso texto={mensagem} />
       <div className="envolucro">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
           <h1 style={{ fontSize: 20, fontWeight: 500 }}>Alunos</h1>
@@ -344,7 +355,22 @@ export default function AdminAlunos() {
           )}
         </div>
 
-        {alunos.map((aluno) => (
+        {alunos.length > 5 && (
+          <input
+            className="campo"
+            placeholder="Buscar aluno pelo nome..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+          />
+        )}
+
+        {alunosFiltrados.length === 0 && busca && (
+          <div className="painel">
+            <p className="painel-legenda" style={{ margin: 0 }}>Nenhum aluno com "{busca}" no nome.</p>
+          </div>
+        )}
+
+        {alunosFiltrados.map((aluno) => (
           <div className="painel" key={aluno.id}>
             <p className="painel-titulo">{aluno.nome}</p>
 
@@ -478,7 +504,6 @@ export default function AdminAlunos() {
           </div>
         ))}
 
-        {mensagem && <p className="painel-legenda">{mensagem}</p>}
       </div>
     </div>
   );

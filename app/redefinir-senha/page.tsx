@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { supabase } from '../../lib/supabaseClient';
 
 export default function RedefinirSenha() {
@@ -51,7 +52,13 @@ export default function RedefinirSenha() {
   }
 
   return (
-    <div className="envolucro" style={{ maxWidth: 420, paddingTop: 80 }}>
+    <div>
+      <header className="topo">
+        <a className="marca" href="/">
+          <Image src="/logo-nexobim-topo.png" alt="NexoBIM" width={80} height={22} priority />
+        </a>
+      </header>
+      <div className="envolucro" style={{ maxWidth: 420, paddingTop: 56 }}>
       <div className="painel">
         <p className="painel-titulo">Escolher nova senha</p>
 
@@ -75,6 +82,7 @@ export default function RedefinirSenha() {
             </button>
           </form>
         )}
+      </div>
       </div>
     </div>
   );

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { supabase } from '../../lib/supabaseClient';
 import { chutarGeneroPeloNome, Genero } from '../../lib/genero';
 
@@ -80,7 +81,13 @@ export default function Login() {
   }
 
   return (
-    <div className="envolucro" style={{ maxWidth: 420, paddingTop: 80 }}>
+    <div>
+      <header className="topo">
+        <a className="marca" href="/">
+          <Image src="/logo-nexobim-topo.png" alt="NexoBIM" width={80} height={22} priority />
+        </a>
+      </header>
+      <div className="envolucro" style={{ maxWidth: 420, paddingTop: 56 }}>
       <div className="painel">
         <p className="painel-titulo">
           {modo === 'entrar' ? 'Entrar na plataforma' : modo === 'criar' ? 'Criar conta' : 'Redefinir senha'}
@@ -161,6 +168,7 @@ export default function Login() {
             <span>Já tem conta? <a href="#" onClick={(e) => { e.preventDefault(); setModo('entrar'); setMensagem(''); }}>Entrar</a></span>
           )}
         </p>
+      </div>
       </div>
     </div>
   );
