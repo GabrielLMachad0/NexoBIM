@@ -5,14 +5,22 @@ export type LinkSugerido = { texto: string; href: string };
 export type RespostaBot = { texto: string; links: LinkSugerido[] };
 
 type PerguntaFrequente = {
-  palavrasChave: string[];
+  // A maioria usa uma lista de frases (substring simples). Quando o verbo
+  // muda de forma com frequência em português (recuperar/recupero/recuperei,
+  // trocar/troco, esqueci/esqueceu...), uma lista de frases fixas nunca
+  // cobre tudo — "corresponde" cobre esses casos verificando radicais.
+  palavrasChave?: string[];
+  corresponde?: (palavras: string[]) => boolean;
   resposta: string;
   link?: LinkSugerido;
 };
 
+const RADICAIS_SENHA = ['recup', 'esquec', 'troc', 'mud', 'redefin', 'perd', 'nov', 'lembr'];
+
 const PERGUNTAS_FREQUENTES: PerguntaFrequente[] = [
   {
-    palavrasChave: ['esqueci a senha', 'esqueci minha senha', 'recuperar senha', 'trocar senha', 'redefinir senha', 'nao lembro a senha'],
+    corresponde: (palavras) =>
+      palavras.includes('senha') && palavras.some((p) => RADICAIS_SENHA.some((r) => p.startsWith(r))),
     resposta: 'Na tela de login, clique em "Esqueci minha senha" e informe seu e-mail — você recebe um link para criar uma senha nova na hora.',
     link: { texto: 'Ir para o login', href: '/login' },
   },
@@ -53,9 +61,11 @@ const PERGUNTAS_FREQUENTES: PerguntaFrequente[] = [
   },
 ];
 
-function encontrarPerguntasFrequentes(perguntaNormalizada: string): PerguntaFrequente[] {
+function encontrarPerguntasFrequentes(perguntaNormalizada: string, palavras: string[]): PerguntaFrequente[] {
   return PERGUNTAS_FREQUENTES.filter((pf) =>
-    pf.palavrasChave.some((chave) => perguntaNormalizada.includes(normalizar(chave)))
+    pf.corresponde
+      ? pf.corresponde(palavras)
+      : pf.palavrasChave!.some((chave) => perguntaNormalizada.includes(normalizar(chave)))
   );
 }
 
@@ -68,7 +78,7 @@ export function responderPergunta(pergunta: string, base: BaseDeConhecimento): R
   const perguntaNormalizada = normalizar(pergunta);
   const palavras = palavrasSignificativas(pergunta);
 
-  const faqEncontradas = encontrarPerguntasFrequentes(perguntaNormalizada);
+  const faqEncontradas = encontrarPerguntasFrequentes(perguntaNormalizada, palavras);
 
   const aulasComPontuacao = base.aulas
     .map((a) => ({ a, pontos: pontuar(palavras, a.titulo, a.descricao, a.nivelNome, a.cursoNome) * 2 + pontuar(palavras, a.titulo) }))

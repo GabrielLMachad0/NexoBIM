@@ -22,10 +22,18 @@ function comLimiteDeTempo<T>(promessa: Promise<T>, ms: number, valorPadrao: T): 
   });
 }
 
+// Espera mínima antes de responder — sem isso, uma resposta que já estava
+// em cache aparece antes da bolha do usuário terminar de entrar na tela,
+// o que dá uma sensação estranha de "atropelo" em vez de conversa.
+function aoMenos<T>(promessa: Promise<T>, ms: number): Promise<T> {
+  return Promise.all([promessa, new Promise((r) => setTimeout(r, ms))]).then(([v]) => v);
+}
+
 export default function ChatBot() {
   const [aberto, setAberto] = useState(false);
   const [mensagens, setMensagens] = useState<Mensagem[]>([MENSAGEM_INICIAL]);
   const [entrada, setEntrada] = useState('');
+  const [digitando, setDigitando] = useState(false);
   const fimDaListaRef = useRef<HTMLDivElement>(null);
 
   // Busca o catálogo em segundo plano assim que a página carrega — não espera
@@ -37,18 +45,20 @@ export default function ChatBot() {
 
   useEffect(() => {
     fimDaListaRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [mensagens, aberto]);
+  }, [mensagens, aberto, digitando]);
 
   async function enviar(pergunta: string) {
     const texto = pergunta.trim();
-    if (!texto) return;
+    if (!texto || digitando) return;
 
     setMensagens((atual) => [...atual, { autor: 'usuario', texto }]);
     setEntrada('');
+    setDigitando(true);
 
-    const base = await comLimiteDeTempo(basePromiseRef.current!, 3000, BASE_VAZIA);
+    const base = await aoMenos(comLimiteDeTempo(basePromiseRef.current!, 3000, BASE_VAZIA), 500);
     const resposta = responderPergunta(texto, base);
     setMensagens((atual) => [...atual, { autor: 'bot', texto: resposta.texto, links: resposta.links }]);
+    setDigitando(false);
   }
 
   return (
@@ -75,13 +85,18 @@ export default function ChatBot() {
                 )}
               </div>
             ))}
-            {mensagens.length === 1 && (
+            {mensagens.length === 1 && !digitando && (
               <div className="chatbot-sugestoes">
                 {PERGUNTAS_SUGERIDAS.map((sugestao) => (
                   <button key={sugestao} className="chatbot-chip" onClick={() => enviar(sugestao)}>
                     {sugestao}
                   </button>
                 ))}
+              </div>
+            )}
+            {digitando && (
+              <div className="chatbot-bolha chatbot-bolha-bot chatbot-digitando" aria-label="Assistente está digitando">
+                <span /><span /><span />
               </div>
             )}
             <div ref={fimDaListaRef} />
@@ -99,8 +114,9 @@ export default function ChatBot() {
               placeholder="Digite sua dúvida..."
               value={entrada}
               onChange={(e) => setEntrada(e.target.value)}
+              disabled={digitando}
             />
-            <button className="botao" type="submit">Enviar</button>
+            <button className="botao" type="submit" disabled={digitando}>Enviar</button>
           </form>
         </div>
       )}

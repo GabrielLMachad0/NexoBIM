@@ -16,13 +16,11 @@ export const metadata = {
     siteName: 'NexoBIM',
     locale: 'pt_BR',
     type: 'website',
-    images: ['/logo-nexobim-preto.png'],
   },
   twitter: {
-    card: 'summary',
+    card: 'summary_large_image',
     title: TITULO,
     description: DESCRICAO,
-    images: ['/logo-nexobim-preto.png'],
   },
 };
 
