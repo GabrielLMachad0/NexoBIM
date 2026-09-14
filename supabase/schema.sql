@@ -121,31 +121,55 @@ create table certificados (
 -- ---------------------------------------------------------------------
 -- 4. Conteúdo personalizado (só existe para quem está em aula particular)
 -- ---------------------------------------------------------------------
+
+-- Grupo de estudo: várias alunas particulares no mesmo plano de aula
+-- compartilham o mesmo conteúdo (plano, tarefas, gravações) em vez de
+-- precisar duplicar tudo aluna por aluna.
+create table grupos_estudo (
+  id uuid primary key default gen_random_uuid(),
+  nome text not null,
+  criado_em timestamptz not null default now()
+);
+
+alter table profiles add column grupo_id uuid references grupos_estudo(id) on delete set null;
+
+-- planos_personalizados, tarefas_designadas e aulas_particulares_gravadas
+-- pertencem a UM aluno OU a UM grupo — nunca os dois, nunca nenhum.
 create table planos_personalizados (
   id uuid primary key default gen_random_uuid(),
-  aluno_id uuid not null references profiles(id) on delete cascade,
+  aluno_id uuid references profiles(id) on delete cascade,
+  grupo_id uuid references grupos_estudo(id) on delete cascade,
   motivo text not null,          -- a dúvida/razão que motivou a aula
   conteudo text not null,
-  criado_em timestamptz not null default now()
+  criado_em timestamptz not null default now(),
+  constraint plano_pertence_a_aluno_ou_grupo
+    check ((aluno_id is not null and grupo_id is null) or (aluno_id is null and grupo_id is not null))
 );
 
 create table tarefas_designadas (
   id uuid primary key default gen_random_uuid(),
-  aluno_id uuid not null references profiles(id) on delete cascade,
+  aluno_id uuid references profiles(id) on delete cascade,
+  grupo_id uuid references grupos_estudo(id) on delete cascade,
   tarefa_padrao_id uuid references tarefas_padrao(id), -- opcional: pode reaproveitar uma tarefa padrão
   titulo text not null,
   descricao text not null default '',
   status text not null default 'pendente' check (status in ('pendente','entregue','concluida')),
-  prazo date
+  prazo date,
+  constraint tarefa_pertence_a_aluno_ou_grupo
+    check ((aluno_id is not null and grupo_id is null) or (aluno_id is null and grupo_id is not null))
 );
 
--- Aula particular gravada: só o aluno dono acessa (e a Raíssa, como admin)
+-- Aula particular gravada: só o aluno dono (ou quem está no grupo dono) acessa,
+-- além da Raíssa como admin.
 create table aulas_particulares_gravadas (
   id uuid primary key default gen_random_uuid(),
-  aluno_id uuid not null references profiles(id) on delete cascade,
+  aluno_id uuid references profiles(id) on delete cascade,
+  grupo_id uuid references grupos_estudo(id) on delete cascade,
   titulo text not null,
   video_url text not null,   -- link da gravação do Teams (ou onde ela for hospedada)
-  data_aula date not null default current_date
+  data_aula date not null default current_date,
+  constraint gravacao_pertence_a_aluno_ou_grupo
+    check ((aluno_id is not null and grupo_id is null) or (aluno_id is null and grupo_id is not null))
 );
 
 -- =====================================================================
@@ -168,11 +192,18 @@ alter table certificados enable row level security;
 alter table planos_personalizados enable row level security;
 alter table tarefas_designadas enable row level security;
 alter table aulas_particulares_gravadas enable row level security;
+alter table grupos_estudo enable row level security;
 
 -- função auxiliar: o usuário logado é admin (a Raíssa)?
 create function is_admin()
 returns boolean as $$
   select coalesce((select is_admin from profiles where id = auth.uid()), false);
+$$ language sql security definer stable set search_path = public;
+
+-- função auxiliar: qual o grupo de estudo do usuário logado (ou null, se não tiver)
+create function grupo_do_usuario_atual()
+returns uuid as $$
+  select grupo_id from profiles where id = auth.uid();
 $$ language sql security definer stable set search_path = public;
 
 -- acessos pendentes: só a admin gerencia (liberar acesso por e-mail antes do cadastro)
@@ -233,22 +264,33 @@ $$;
 
 grant execute on function verificar_certificado(text) to anon, authenticated;
 
--- conteúdo personalizado: só o aluno dono lê; só admin escreve
+-- grupos de estudo: admin gerencia; cada membro vê o próprio grupo
+create policy "admin gerencia grupos de estudo" on grupos_estudo for all
+  using (is_admin()) with check (is_admin());
+create policy "membro ve o proprio grupo" on grupos_estudo for select
+  using (
+    is_admin()
+    or exists (select 1 from profiles where profiles.id = auth.uid() and profiles.grupo_id = grupos_estudo.id)
+  );
+
+-- conteúdo personalizado: o aluno dono lê (ou, se for conteúdo de grupo, quem
+-- estiver no mesmo grupo); só admin escreve
 create policy "ler proprio plano personalizado" on planos_personalizados for select
-  using (aluno_id = auth.uid() or is_admin());
+  using (aluno_id = auth.uid() or grupo_id = grupo_do_usuario_atual() or is_admin());
 create policy "admin escreve planos personalizados" on planos_personalizados for insert with check (is_admin());
 create policy "admin atualiza planos personalizados" on planos_personalizados for update using (is_admin());
 
 create policy "ler proprias tarefas designadas" on tarefas_designadas for select
-  using (aluno_id = auth.uid() or is_admin());
+  using (aluno_id = auth.uid() or grupo_id = grupo_do_usuario_atual() or is_admin());
 create policy "aluno atualiza status da propria tarefa" on tarefas_designadas for update
-  using (aluno_id = auth.uid() or is_admin());
+  using (aluno_id = auth.uid() or grupo_id = grupo_do_usuario_atual() or is_admin());
 create policy "admin cria tarefas designadas" on tarefas_designadas for insert with check (is_admin());
 
--- a linha mais importante do arquivo inteiro: a aula particular gravada
--- só pode ser lida por quem é o dono (aluno_id = auth.uid()) ou pela admin
+-- a linha mais importante do arquivo inteiro: a aula particular gravada só
+-- pode ser lida por quem é o dono (aluno_id = auth.uid()), por quem está no
+-- mesmo grupo (se for conteúdo de grupo) ou pela admin
 create policy "so o dono ve a propria aula gravada" on aulas_particulares_gravadas for select
-  using (aluno_id = auth.uid() or is_admin());
+  using (aluno_id = auth.uid() or grupo_id = grupo_do_usuario_atual() or is_admin());
 
 -- admin também pode remover conteúdo particular cadastrado por engano
 create policy "admin remove planos personalizados" on planos_personalizados for delete using (is_admin());

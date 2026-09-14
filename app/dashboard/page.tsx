@@ -31,7 +31,7 @@ type AulaGravada = { id: string; titulo: string; video_url: string; data_aula: s
 export default function Dashboard() {
   const router = useRouter();
   const [carregando, setCarregando] = useState(true);
-  const [perfil, setPerfil] = useState<{ nome: string; is_assinante: boolean; is_aluno_particular: boolean; is_admin: boolean } | null>(null);
+  const [perfil, setPerfil] = useState<{ nome: string; is_assinante: boolean; is_aluno_particular: boolean; is_admin: boolean; grupo_nome: string | null } | null>(null);
   const [cursos, setCursos] = useState<Curso[]>([]);
   const [assistidas, setAssistidas] = useState<Set<string>>(new Set());
   const [tarefasFeitas, setTarefasFeitas] = useState<Set<string>>(new Set());
@@ -56,10 +56,15 @@ export default function Dashboard() {
 
     const { data: perfilData } = await supabase
       .from('profiles')
-      .select('nome, is_assinante, is_aluno_particular, is_admin')
+      .select('nome, is_assinante, is_aluno_particular, is_admin, grupo_id, grupos_estudo(nome)')
       .eq('id', userId)
       .single();
-    setPerfil(perfilData as any);
+    const grupoId = (perfilData as any)?.grupo_id as string | null | undefined;
+    setPerfil(
+      perfilData
+        ? { ...(perfilData as any), grupo_nome: (perfilData as any).grupos_estudo?.nome || null }
+        : null
+    );
 
     // Cada consulta abaixo é independente das outras — dispara todas de uma vez
     // em vez de esperar uma terminar pra começar a próxima.
@@ -100,22 +105,25 @@ export default function Dashboard() {
     }
 
     if (perfilData?.is_aluno_particular) {
+      // Conteúdo de um aluno é dele (aluno_id) OU do grupo de estudo que ele integra
+      // (grupo_id) — as duas fontes aparecem juntas, com a mesma apresentação.
+      const dono = grupoId ? `aluno_id.eq.${userId},grupo_id.eq.${grupoId}` : `aluno_id.eq.${userId}`;
       tarefas.push(
         supabase
           .from('planos_personalizados')
           .select('id, motivo, conteudo, criado_em')
-          .eq('aluno_id', userId)
+          .or(dono)
           .order('criado_em', { ascending: false })
           .then(({ data }) => setPlanos((data as any) || [])),
         supabase
           .from('tarefas_designadas')
           .select('id, titulo, descricao, status, prazo')
-          .eq('aluno_id', userId)
+          .or(dono)
           .then(({ data }) => setTarefasDesignadas((data as any) || [])),
         supabase
           .from('aulas_particulares_gravadas')
           .select('id, titulo, video_url, data_aula')
-          .eq('aluno_id', userId)
+          .or(dono)
           .order('data_aula', { ascending: false })
           .then(({ data }) => setAulasGravadas((data as any) || [])),
       );
@@ -144,6 +152,9 @@ export default function Dashboard() {
         {perfil.is_aluno_particular && (
           <>
             <h2 style={{ fontSize: 15, fontWeight: 500, color: 'var(--texto-suave)', marginTop: 28 }}>Sua aula particular</h2>
+            {perfil.grupo_nome && (
+              <p className="painel-legenda" style={{ marginTop: -4 }}>Você está no grupo <strong>{perfil.grupo_nome}</strong> — o conteúdo abaixo é o mesmo pra todo o grupo.</p>
+            )}
 
             {aulasGravadas.map((a) => (
               <div className="painel" key={a.id}>

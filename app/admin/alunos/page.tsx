@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { supabase } from '../../../lib/supabaseClient';
 import Cabecalho from '../../../components/Cabecalho';
 
-type Aluno = { id: string; nome: string; is_assinante: boolean; is_aluno_particular: boolean };
+type Aluno = { id: string; nome: string; is_assinante: boolean; is_aluno_particular: boolean; grupo_id: string | null };
 type AcessoPendente = { email: string; is_assinante: boolean; is_aluno_particular: boolean; atualizado_em: string };
+type Grupo = { id: string; nome: string };
 type Plano = { id: string; motivo: string; conteudo: string };
 type TarefaDesignada = { id: string; titulo: string; descricao: string; status: string; prazo: string | null };
 type Gravacao = { id: string; titulo: string; video_url: string; data_aula: string };
@@ -15,6 +17,7 @@ export default function AdminAlunos() {
   const router = useRouter();
   const [carregando, setCarregando] = useState(true);
   const [alunos, setAlunos] = useState<Aluno[]>([]);
+  const [grupos, setGrupos] = useState<Grupo[]>([]);
   const [pendentes, setPendentes] = useState<AcessoPendente[]>([]);
   const [expandido, setExpandido] = useState<string | null>(null);
 
@@ -45,18 +48,27 @@ export default function AdminAlunos() {
     if (!sessao.session) { router.push('/login'); return; }
     const { data: perfil } = await supabase.from('profiles').select('is_admin').eq('id', sessao.session.user.id).single();
     if (!perfil?.is_admin) { router.push('/dashboard'); return; }
-    await carregar();
-    await carregarPendentes();
+    await Promise.all([carregar(), carregarPendentes(), carregarGrupos()]);
     setCarregando(false);
   }
 
   async function carregar() {
     const { data } = await supabase
       .from('profiles')
-      .select('id, nome, is_assinante, is_aluno_particular')
+      .select('id, nome, is_assinante, is_aluno_particular, grupo_id')
       .eq('is_admin', false)
       .order('nome');
     setAlunos((data as any) || []);
+  }
+
+  async function carregarGrupos() {
+    const { data } = await supabase.from('grupos_estudo').select('id, nome').order('nome');
+    setGrupos((data as any) || []);
+  }
+
+  async function alterarGrupoDoAluno(alunoId: string, grupoId: string) {
+    await supabase.from('profiles').update({ grupo_id: grupoId || null }).eq('id', alunoId);
+    carregar();
   }
 
   async function carregarPendentes() {
@@ -247,6 +259,29 @@ export default function AdminAlunos() {
             <label style={{ fontSize: 13 }}>
               <input type="checkbox" checked={aluno.is_aluno_particular} onChange={() => alternarFlag(aluno, 'is_aluno_particular')} /> Aluno particular
             </label>
+
+            {aluno.is_aluno_particular && (
+              <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <label className="rotulo" style={{ margin: 0 }}>Grupo de estudo</label>
+                <select
+                  className="campo"
+                  style={{ marginBottom: 0, width: 'auto' }}
+                  value={aluno.grupo_id || ''}
+                  onChange={(e) => alterarGrupoDoAluno(aluno.id, e.target.value)}
+                >
+                  <option value="">Nenhum (conteúdo individual)</option>
+                  {grupos.map((g) => <option value={g.id} key={g.id}>{g.nome}</option>)}
+                </select>
+              </div>
+            )}
+
+            {aluno.grupo_id && (
+              <p className="painel-legenda" style={{ marginTop: 8, marginBottom: 0 }}>
+                Este aluno está no grupo <strong>{grupos.find((g) => g.id === aluno.grupo_id)?.nome}</strong> — o plano de aula,
+                as tarefas e as gravações do grupo aparecem pra ele automaticamente.{' '}
+                <Link href="/admin/grupos">Gerenciar conteúdo do grupo →</Link>
+              </p>
+            )}
 
             <div style={{ marginTop: 12 }}>
               <button

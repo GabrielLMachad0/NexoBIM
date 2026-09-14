@@ -121,6 +121,12 @@ export default function AdminHome() {
         </div>
 
         <div className="painel">
+          <p className="painel-titulo">Grupos de estudo</p>
+          <p className="painel-legenda">Alunas particulares no mesmo plano de aula, com o mesmo conteúdo.</p>
+          <a className="botao" href="/admin/grupos">Gerenciar grupos</a>
+        </div>
+
+        <div className="painel">
           <p className="painel-titulo">Acervo de recursos</p>
           <p className="painel-legenda">Famílias e projetos de Revit disponíveis para download.</p>
           <a className="botao" href="/admin/recursos">Gerenciar acervo</a>
