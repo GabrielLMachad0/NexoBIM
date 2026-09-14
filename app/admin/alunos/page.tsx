@@ -7,7 +7,7 @@ import { supabase } from '../../../lib/supabaseClient';
 import Cabecalho from '../../../components/Cabecalho';
 
 type Aluno = { id: string; nome: string; is_assinante: boolean; is_aluno_particular: boolean; grupo_id: string | null };
-type AcessoPendente = { email: string; is_assinante: boolean; is_aluno_particular: boolean; atualizado_em: string };
+type AcessoPendente = { email: string; is_assinante: boolean; is_aluno_particular: boolean; grupo_id: string | null; atualizado_em: string };
 type Grupo = { id: string; nome: string };
 type Plano = { id: string; motivo: string; conteudo: string };
 type TarefaDesignada = { id: string; titulo: string; descricao: string; status: string; prazo: string | null };
@@ -24,6 +24,7 @@ export default function AdminAlunos() {
   const [emailConvite, setEmailConvite] = useState('');
   const [assinanteConvite, setAssinanteConvite] = useState(false);
   const [particularConvite, setParticularConvite] = useState(true);
+  const [grupoConvite, setGrupoConvite] = useState('');
   const [mensagemConvite, setMensagemConvite] = useState('');
 
   const [motivo, setMotivo] = useState('');
@@ -74,7 +75,7 @@ export default function AdminAlunos() {
   async function carregarPendentes() {
     const { data } = await supabase
       .from('acessos_pendentes')
-      .select('email, is_assinante, is_aluno_particular, atualizado_em')
+      .select('email, is_assinante, is_aluno_particular, grupo_id, atualizado_em')
       .order('atualizado_em', { ascending: false });
     setPendentes((data as any) || []);
   }
@@ -94,13 +95,14 @@ export default function AdminAlunos() {
       await supabase.from('profiles').update({
         is_assinante: assinanteConvite || perfilExistente.is_assinante,
         is_aluno_particular: particularConvite || perfilExistente.is_aluno_particular,
+        ...(grupoConvite ? { grupo_id: grupoConvite } : {}),
       }).eq('id', perfilExistente.id);
       setMensagemConvite(`${email} já tinha conta — acesso liberado, já pode entrar.`);
       carregar();
     } else {
       const { data: pendenteExistente } = await supabase
         .from('acessos_pendentes')
-        .select('is_assinante, is_aluno_particular')
+        .select('is_assinante, is_aluno_particular, grupo_id')
         .eq('email', email)
         .maybeSingle();
 
@@ -108,6 +110,7 @@ export default function AdminAlunos() {
         email,
         is_assinante: assinanteConvite || pendenteExistente?.is_assinante || false,
         is_aluno_particular: particularConvite || pendenteExistente?.is_aluno_particular || false,
+        grupo_id: grupoConvite || pendenteExistente?.grupo_id || null,
         atualizado_em: new Date().toISOString(),
       });
       setMensagemConvite(`Acesso reservado para ${email} — quando essa pessoa criar a conta com esse e-mail em /login, o acesso é liberado na hora.`);
@@ -223,6 +226,15 @@ export default function AdminAlunos() {
             <label style={{ fontSize: 13 }}>
               <input type="checkbox" checked={particularConvite} onChange={(e) => setParticularConvite(e.target.checked)} /> Aluno particular
             </label>
+            {particularConvite && grupos.length > 0 && (
+              <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <label className="rotulo" style={{ margin: 0 }}>Grupo de estudo (opcional)</label>
+                <select className="campo" style={{ marginBottom: 0, width: 'auto' }} value={grupoConvite} onChange={(e) => setGrupoConvite(e.target.value)}>
+                  <option value="">Nenhum</option>
+                  {grupos.map((g) => <option value={g.id} key={g.id}>{g.nome}</option>)}
+                </select>
+              </div>
+            )}
             <div style={{ marginTop: 12 }}>
               <button className="botao" type="submit">Liberar acesso</button>
             </div>
@@ -237,7 +249,11 @@ export default function AdminAlunos() {
                   <div>
                     <div className="aula-titulo">{p.email}</div>
                     <p className="painel-legenda" style={{ margin: 0 }}>
-                      {[p.is_assinante && 'assinante', p.is_aluno_particular && 'aluno particular'].filter(Boolean).join(' · ')}
+                      {[
+                        p.is_assinante && 'assinante',
+                        p.is_aluno_particular && 'aluno particular',
+                        p.grupo_id && `grupo: ${grupos.find((g) => g.id === p.grupo_id)?.nome || '—'}`,
+                      ].filter(Boolean).join(' · ')}
                     </p>
                   </div>
                   <button className="botao fantasma" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => cancelarPendente(p.email)}>

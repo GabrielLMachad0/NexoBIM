@@ -35,13 +35,14 @@ declare
 begin
   select * into pendente from acessos_pendentes where email = new.email;
 
-  insert into profiles (id, nome, email, is_assinante, is_aluno_particular)
+  insert into profiles (id, nome, email, is_assinante, is_aluno_particular, grupo_id)
   values (
     new.id,
     coalesce(new.raw_user_meta_data->>'nome', new.email),
     new.email,
     coalesce(pendente.is_assinante, false),
-    coalesce(pendente.is_aluno_particular, false)
+    coalesce(pendente.is_aluno_particular, false),
+    pendente.grupo_id
   );
 
   delete from acessos_pendentes where email = new.email;
@@ -132,6 +133,10 @@ create table grupos_estudo (
 );
 
 alter table profiles add column grupo_id uuid references grupos_estudo(id) on delete set null;
+
+-- Um convite por e-mail (acessos_pendentes) também pode reservar o grupo —
+-- aplicado automaticamente pelo handle_new_user() quando a pessoa se cadastra.
+alter table acessos_pendentes add column grupo_id uuid references grupos_estudo(id) on delete set null;
 
 -- planos_personalizados, tarefas_designadas e aulas_particulares_gravadas
 -- pertencem a UM aluno OU a UM grupo — nunca os dois, nunca nenhum.
