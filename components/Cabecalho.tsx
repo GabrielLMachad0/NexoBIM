@@ -30,6 +30,7 @@ export default function Cabecalho({ ehAdmin }: { ehAdmin?: boolean }) {
       <nav className={menuAberto ? 'nav-mobile-aberto' : ''}>
         <a href="/dashboard" onClick={() => setMenuAberto(false)}>Meu painel</a>
         <a href="/recursos" onClick={() => setMenuAberto(false)}>Recursos</a>
+        <a href="/dashboard/perfil" onClick={() => setMenuAberto(false)}>Meu perfil</a>
         {ehAdmin && <a href="/admin" onClick={() => setMenuAberto(false)}>Administração</a>}
         <a href="#" onClick={(e) => { e.preventDefault(); sair(); }}>Sair</a>
       </nav>

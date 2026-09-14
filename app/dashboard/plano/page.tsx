@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
 import PaginaPlanoDeAula from '../../../components/PaginaPlanoDeAula';
 import { Plano, planosGerais } from '../../../lib/aulaParticular';
+import Esqueleto from '../../../components/Esqueleto';
 
 export default function PlanoDeAulaPage() {
   const router = useRouter();
@@ -41,7 +42,7 @@ export default function PlanoDeAulaPage() {
     setCarregando(false);
   }
 
-  if (carregando) return <div className="envolucro">Carregando...</div>;
+  if (carregando) return <Esqueleto />;
 
   return <PaginaPlanoDeAula planos={planosGerais(planos)} hrefVoltar="/dashboard" ehAdmin={ehAdmin} />;
 }

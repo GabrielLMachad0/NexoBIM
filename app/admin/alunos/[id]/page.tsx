@@ -9,6 +9,7 @@ import AnelProgresso from '../../../../components/AnelProgresso';
 import SecaoAulaParticular from '../../../../components/SecaoAulaParticular';
 import { porGenero } from '../../../../lib/genero';
 import { Plano, TarefaDesignada, AulaGravada } from '../../../../lib/aulaParticular';
+import Esqueleto from '../../../../components/Esqueleto';
 
 type Aula = { id: string; ordem: number };
 type TarefaPadrao = { id: string };
@@ -105,7 +106,7 @@ export default function PreviewAluno() {
     setCarregando(false);
   }
 
-  if (carregando) return <div className="envolucro">Carregando...</div>;
+  if (carregando) return <Esqueleto />;
   if (!perfil) return null;
 
   return (

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
 import Cabecalho from '../../../components/Cabecalho';
+import Esqueleto from '../../../components/Esqueleto';
 
 type Aula = { id: string; titulo: string; youtube_id: string; ordem: number; descricao: string };
 type TarefaPadrao = { id: string; titulo: string; descricao: string };
@@ -143,7 +144,7 @@ export default function AdminAulas() {
     carregar();
   }
 
-  if (carregando) return <div className="envolucro">Carregando...</div>;
+  if (carregando) return <Esqueleto />;
 
   const todosNiveis = cursos.flatMap((c) => c.niveis.map((n) => ({ ...n, nomeCurso: c.nome })));
 

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 import Cabecalho from '../../components/Cabecalho';
+import Esqueleto from '../../components/Esqueleto';
 
 type Curso = { id: string; nome: string };
 type Resumo = { alunos: number; assinantes: number; recursos: number; arquivos: number };
@@ -85,7 +86,7 @@ export default function AdminHome() {
     setMensagem('Nível criado.');
   }
 
-  if (carregando) return <div className="envolucro">Carregando...</div>;
+  if (carregando) return <Esqueleto />;
 
   return (
     <div>

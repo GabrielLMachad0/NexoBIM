@@ -818,3 +818,28 @@ button.aula-linha:first-of-type {
 .painel-documento h2:first-child {
   margin-top: 0;
 }
+
+/* Estado de carregamento (esqueleto) */
+
+.esqueleto-bloco {
+  height: 14px;
+  border-radius: 3px;
+  margin-bottom: 10px;
+  background: linear-gradient(90deg, var(--borda) 25%, var(--painel) 37%, var(--borda) 63%);
+  background-size: 400% 100%;
+  animation: esqueleto-brilho 1.4s ease infinite;
+}
+
+.esqueleto-titulo {
+  height: 22px;
+  width: 220px;
+  margin: 0 0 24px;
+  background: linear-gradient(90deg, var(--borda) 25%, var(--fundo) 37%, var(--borda) 63%);
+  background-size: 400% 100%;
+  animation: esqueleto-brilho 1.4s ease infinite;
+}
+
+@keyframes esqueleto-brilho {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}

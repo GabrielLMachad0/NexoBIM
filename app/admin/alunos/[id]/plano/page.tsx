@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '../../../../../lib/supabaseClient';
 import PaginaPlanoDeAula from '../../../../../components/PaginaPlanoDeAula';
 import { Plano, planosGerais } from '../../../../../lib/aulaParticular';
+import Esqueleto from '../../../../../components/Esqueleto';
 
 export default function PreviewPlanoDeAula() {
   const params = useParams<{ id: string }>();
@@ -37,7 +38,7 @@ export default function PreviewPlanoDeAula() {
     setCarregando(false);
   }
 
-  if (carregando) return <div className="envolucro">Carregando...</div>;
+  if (carregando) return <Esqueleto />;
 
   return <PaginaPlanoDeAula planos={planosGerais(planos)} hrefVoltar={`/admin/alunos/${params.id}`} ehAdmin />;
 }

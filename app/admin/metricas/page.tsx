@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
 import Cabecalho from '../../../components/Cabecalho';
+import Esqueleto from '../../../components/Esqueleto';
+import GraficoBarras from '../../../components/GraficoBarras';
 
 type Aula = { id: string; titulo: string };
 type Nivel = { id: string; nome: string; aulas: Aula[]; tarefas_padrao: { id: string }[] };
@@ -27,6 +29,9 @@ export default function AdminMetricas() {
   const [certificadosEmitidos, setCertificadosEmitidos] = useState(0);
   const [linhas, setLinhas] = useState<LinhaNivel[]>([]);
   const [aulaTop, setAulaTop] = useState<{ titulo: string; vezes: number } | null>(null);
+  const [novosAlunosPorMes, setNovosAlunosPorMes] = useState<{ rotulo: string; valor: number }[]>([]);
+  const [certificadosPorMes, setCertificadosPorMes] = useState<{ rotulo: string; valor: number }[]>([]);
+  const [aulasAssistidasPorMes, setAulasAssistidasPorMes] = useState<{ rotulo: string; valor: number }[]>([]);
 
   useEffect(() => {
     guardaEcarrega();
@@ -44,10 +49,10 @@ export default function AdminMetricas() {
   async function carregar() {
     // As quatro consultas abaixo não dependem uma da outra — buscam em paralelo.
     const [{ data: alunos }, { data: certs }, { data: cursosData }, { data: progAulas }] = await Promise.all([
-      supabase.from('profiles').select('is_admin, is_assinante, is_aluno_particular').eq('is_admin', false),
-      supabase.from('certificados').select('nivel_id'),
+      supabase.from('profiles').select('is_admin, is_assinante, is_aluno_particular, created_at').eq('is_admin', false),
+      supabase.from('certificados').select('nivel_id, emitido_em'),
       supabase.from('cursos').select('id, nome, niveis(id, nome, aulas(id, titulo), tarefas_padrao(id))').order('ordem'),
-      supabase.from('progresso_aulas').select('aula_id'),
+      supabase.from('progresso_aulas').select('aula_id, assistido_em'),
     ]);
 
     setTotalAlunos((alunos || []).length);
@@ -93,9 +98,35 @@ export default function AdminMetricas() {
 
     setLinhas(linhasCalculadas);
     setAulaTop(melhorAula);
+
+    setNovosAlunosPorMes(agruparPorMes((alunos || []).map((a: any) => a.created_at)));
+    setCertificadosPorMes(agruparPorMes((certs || []).map((c: any) => c.emitido_em)));
+    setAulasAssistidasPorMes(agruparPorMes((progAulas || []).map((p: any) => p.assistido_em)));
   }
 
-  if (carregando) return <div className="envolucro">Carregando...</div>;
+  // Últimos 6 meses (incluindo o atual), contando quantas datas cairam em cada um —
+  // dados reais, direto das colunas de data já existentes (nada inventado).
+  function agruparPorMes(datas: string[]): { rotulo: string; valor: number }[] {
+    const agora = new Date();
+    const meses: { chave: string; rotulo: string }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(agora.getFullYear(), agora.getMonth() - i, 1);
+      meses.push({
+        chave: `${d.getFullYear()}-${d.getMonth()}`,
+        rotulo: d.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', ''),
+      });
+    }
+    const contagem = new Map(meses.map((m) => [m.chave, 0]));
+    for (const data of datas) {
+      if (!data) continue;
+      const d = new Date(data);
+      const chave = `${d.getFullYear()}-${d.getMonth()}`;
+      if (contagem.has(chave)) contagem.set(chave, (contagem.get(chave) || 0) + 1);
+    }
+    return meses.map((m) => ({ rotulo: m.rotulo, valor: contagem.get(m.chave) || 0 }));
+  }
+
+  if (carregando) return <Esqueleto />;
 
   return (
     <div>
@@ -116,6 +147,22 @@ export default function AdminMetricas() {
             <p className="painel-legenda" style={{ margin: 0 }}>{aulaTop.titulo} — {aulaTop.vezes} visualização{aulaTop.vezes === 1 ? '' : 'ões'}</p>
           </div>
         )}
+
+        <p className="painel-legenda" style={{ marginTop: 24, marginBottom: 8 }}>Evolução (últimos 6 meses)</p>
+        <div className="grade-niveis">
+          <div className="painel">
+            <p className="painel-titulo" style={{ margin: 0 }}>Novos alunos</p>
+            <GraficoBarras pontos={novosAlunosPorMes} />
+          </div>
+          <div className="painel">
+            <p className="painel-titulo" style={{ margin: 0 }}>Aulas assistidas</p>
+            <GraficoBarras pontos={aulasAssistidasPorMes} />
+          </div>
+          <div className="painel">
+            <p className="painel-titulo" style={{ margin: 0 }}>Certificados emitidos</p>
+            <GraficoBarras pontos={certificadosPorMes} />
+          </div>
+        </div>
 
         <p className="painel-legenda" style={{ marginTop: 24, marginBottom: 8 }}>Progresso por nível</p>
         <div className="painel">

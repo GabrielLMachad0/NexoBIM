@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { supabase } from '../../../lib/supabaseClient';
 import Cabecalho from '../../../components/Cabecalho';
 import { Recurso, slugCategoria, iconeDaCategoria, thumbnailDoRecurso } from '../../../lib/recursos';
+import Esqueleto from '../../../components/Esqueleto';
 
 export default function CategoriaRecursos() {
   const params = useParams<{ categoria: string }>();
@@ -44,7 +45,7 @@ export default function CategoriaRecursos() {
     supabase.rpc('incrementar_clique_recurso', { p_recurso_id: recursoId });
   }
 
-  if (carregando) return <div className="envolucro">Carregando...</div>;
+  if (carregando) return <Esqueleto />;
 
   return (
     <div>

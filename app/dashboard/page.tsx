@@ -8,6 +8,7 @@ import Cabecalho from '../../components/Cabecalho';
 import AnelProgresso from '../../components/AnelProgresso';
 import SecaoAulaParticular from '../../components/SecaoAulaParticular';
 import { Plano, TarefaDesignada, AulaGravada } from '../../lib/aulaParticular';
+import Esqueleto from '../../components/Esqueleto';
 
 type Aula = { id: string; titulo: string; youtube_id: string; ordem: number };
 type TarefaPadrao = { id: string; titulo: string; descricao: string };
@@ -33,6 +34,7 @@ export default function Dashboard() {
   const [tarefasDesignadas, setTarefasDesignadas] = useState<TarefaDesignada[]>([]);
   const [aulasGravadas, setAulasGravadas] = useState<AulaGravada[]>([]);
   const [continuarEm, setContinuarEm] = useState<{ nivelId: string; nivelNome: string; cursoNome: string; aulaTitulo: string } | null>(null);
+  const [idUsuario, setIdUsuario] = useState<string | null>(null);
 
   useEffect(() => {
     carregar();
@@ -45,6 +47,7 @@ export default function Dashboard() {
       return;
     }
     const userId = sessao.session.user.id;
+    setIdUsuario(userId);
 
     const { data: perfilData } = await supabase
       .from('profiles')
@@ -125,7 +128,7 @@ export default function Dashboard() {
     setCarregando(false);
   }
 
-  if (carregando) return <div className="envolucro">Carregando...</div>;
+  if (carregando) return <Esqueleto />;
   if (!perfil) return null;
 
   return (
@@ -153,6 +156,7 @@ export default function Dashboard() {
               planos={planos}
               tarefasDesignadas={tarefasDesignadas}
               hrefPlano="/dashboard/plano"
+              chaveContinuar={idUsuario}
             />
           </>
         )}

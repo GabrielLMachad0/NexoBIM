@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../../../../../lib/supabaseClient';
 import Cabecalho from '../../../../../../components/Cabecalho';
+import Esqueleto from '../../../../../../components/Esqueleto';
 
 type Aula = { id: string; titulo: string; descricao: string; youtube_id: string; ordem: number };
 type TarefaPadrao = { id: string; titulo: string; descricao: string };
@@ -73,7 +74,7 @@ export default function PreviewNivel() {
     setCarregando(false);
   }
 
-  if (carregando) return <div className="envolucro">Carregando...</div>;
+  if (carregando) return <Esqueleto />;
   if (!nivel) return null;
 
   const aulasOrdenadas = [...nivel.aulas].sort((a, b) => a.ordem - b.ordem);

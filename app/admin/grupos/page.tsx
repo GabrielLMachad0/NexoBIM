@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../../lib/supabaseClient';
 import Cabecalho from '../../../components/Cabecalho';
+import Esqueleto from '../../../components/Esqueleto';
 
 type Grupo = { id: string; nome: string; criado_em: string };
 type Membro = { id: string; nome: string };
@@ -26,13 +27,16 @@ export default function AdminGrupos() {
   const [motivo, setMotivo] = useState('');
   const [conteudoPlano, setConteudoPlano] = useState('');
   const [rotuloPlano, setRotuloPlano] = useState('');
+  const [editandoPlanoId, setEditandoPlanoId] = useState<string | null>(null);
   const [tituloTarefa, setTituloTarefa] = useState('');
   const [descricaoTarefa, setDescricaoTarefa] = useState('');
   const [prazoTarefa, setPrazoTarefa] = useState('');
   const [rotuloTarefa, setRotuloTarefa] = useState('');
+  const [editandoTarefaId, setEditandoTarefaId] = useState<string | null>(null);
   const [tituloGravacao, setTituloGravacao] = useState('');
   const [linkGravacao, setLinkGravacao] = useState('');
   const [rotuloGravacao, setRotuloGravacao] = useState('');
+  const [editandoGravacaoId, setEditandoGravacaoId] = useState<string | null>(null);
 
   const [membrosDoGrupo, setMembrosDoGrupo] = useState<Membro[]>([]);
   const [planosDoGrupo, setPlanosDoGrupo] = useState<Plano[]>([]);
@@ -96,6 +100,7 @@ export default function AdminGrupos() {
   }
 
   async function alternarExpandido(grupoId: string) {
+    cancelarEdicaoPlano(); cancelarEdicaoTarefa(); cancelarEdicaoGravacao();
     if (expandido === grupoId) {
       setExpandido(null);
       return;
@@ -119,28 +124,69 @@ export default function AdminGrupos() {
     carregarAlunosParticulares();
   }
 
+  function editarPlano(p: Plano) {
+    setEditandoPlanoId(p.id);
+    setMotivo(p.motivo); setConteudoPlano(p.conteudo); setRotuloPlano(p.aula_rotulo || '');
+  }
+
+  function cancelarEdicaoPlano() {
+    setEditandoPlanoId(null);
+    setMotivo(''); setConteudoPlano(''); setRotuloPlano('');
+  }
+
   async function salvarPlano(grupoId: string) {
     if (!motivo || !conteudoPlano) return;
-    await supabase.from('planos_personalizados').insert({ grupo_id: grupoId, motivo, conteudo: conteudoPlano, aula_rotulo: rotuloPlano.trim() || null });
-    setMotivo(''); setConteudoPlano(''); setRotuloPlano('');
+    const dados = { motivo, conteudo: conteudoPlano, aula_rotulo: rotuloPlano.trim() || null };
+    if (editandoPlanoId) {
+      await supabase.from('planos_personalizados').update(dados).eq('id', editandoPlanoId);
+    } else {
+      await supabase.from('planos_personalizados').insert({ grupo_id: grupoId, ...dados });
+    }
+    cancelarEdicaoPlano();
     carregarConteudoDoGrupo(grupoId);
+  }
+
+  function editarTarefa(t: TarefaDesignada) {
+    setEditandoTarefaId(t.id);
+    setTituloTarefa(t.titulo); setDescricaoTarefa(t.descricao); setPrazoTarefa(t.prazo || ''); setRotuloTarefa(t.aula_rotulo || '');
+  }
+
+  function cancelarEdicaoTarefa() {
+    setEditandoTarefaId(null);
+    setTituloTarefa(''); setDescricaoTarefa(''); setPrazoTarefa(''); setRotuloTarefa('');
   }
 
   async function salvarTarefa(grupoId: string) {
     if (!tituloTarefa) return;
-    await supabase.from('tarefas_designadas').insert({
-      grupo_id: grupoId, titulo: tituloTarefa, descricao: descricaoTarefa, prazo: prazoTarefa || null, aula_rotulo: rotuloTarefa.trim() || null,
-    });
-    setTituloTarefa(''); setDescricaoTarefa(''); setPrazoTarefa(''); setRotuloTarefa('');
+    const dados = { titulo: tituloTarefa, descricao: descricaoTarefa, prazo: prazoTarefa || null, aula_rotulo: rotuloTarefa.trim() || null };
+    if (editandoTarefaId) {
+      await supabase.from('tarefas_designadas').update(dados).eq('id', editandoTarefaId);
+    } else {
+      await supabase.from('tarefas_designadas').insert({ grupo_id: grupoId, ...dados });
+    }
+    cancelarEdicaoTarefa();
     carregarConteudoDoGrupo(grupoId);
+  }
+
+  function editarGravacao(g: Gravacao) {
+    setEditandoGravacaoId(g.id);
+    setTituloGravacao(g.titulo); setLinkGravacao(g.video_url); setRotuloGravacao(g.aula_rotulo || '');
+  }
+
+  function cancelarEdicaoGravacao() {
+    setEditandoGravacaoId(null);
+    setTituloGravacao(''); setLinkGravacao(''); setRotuloGravacao('');
   }
 
   async function salvarGravacao(grupoId: string) {
     if (!tituloGravacao || !linkGravacao) return;
-    await supabase.from('aulas_particulares_gravadas').insert({
-      grupo_id: grupoId, titulo: tituloGravacao, video_url: linkGravacao, aula_rotulo: rotuloGravacao.trim() || null,
-    });
-    setTituloGravacao(''); setLinkGravacao(''); setRotuloGravacao('');
+    const dados = { titulo: tituloGravacao, video_url: linkGravacao, aula_rotulo: rotuloGravacao.trim() || null };
+    if (editandoGravacaoId) {
+      await supabase.from('aulas_particulares_gravadas').update(dados).eq('id', editandoGravacaoId);
+    } else {
+      await supabase.from('aulas_particulares_gravadas').insert({ grupo_id: grupoId, ...dados });
+    }
+    cancelarEdicaoGravacao();
     carregarConteudoDoGrupo(grupoId);
   }
 
@@ -162,7 +208,7 @@ export default function AdminGrupos() {
     carregarConteudoDoGrupo(grupoId);
   }
 
-  if (carregando) return <div className="envolucro">Carregando...</div>;
+  if (carregando) return <Esqueleto />;
 
   const alunosSemGrupo = alunosParticulares.filter((a) => !membrosDoGrupo.some((m) => m.id === a.id));
 
@@ -243,16 +289,22 @@ export default function AdminGrupos() {
                           <div className="aula-titulo">{p.motivo}{p.aula_rotulo && <span className="marcador" style={{ marginLeft: 8 }}>{p.aula_rotulo}</span>}</div>
                           <p className="painel-legenda" style={{ margin: 0 }}>{p.conteudo}</p>
                         </div>
-                        <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => removerPlano(p.id, grupo.id)}>Remover</button>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => editarPlano(p)}>Editar</button>
+                          <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => removerPlano(p.id, grupo.id)}>Remover</button>
+                        </div>
                       </div>
                     ))}
                   </>
                 )}
-                <label className="rotulo" style={{ marginTop: 16 }}>Plano de aula do grupo</label>
+                <label className="rotulo" style={{ marginTop: 16 }}>{editandoPlanoId ? 'Editando plano do grupo' : 'Plano de aula do grupo'}</label>
                 <input className="campo" placeholder="Motivo / dúvida da aula" value={motivo} onChange={(e) => setMotivo(e.target.value)} />
                 <textarea className="campo" placeholder="Conteúdo do plano" rows={3} value={conteudoPlano} onChange={(e) => setConteudoPlano(e.target.value)} />
                 <input className="campo" placeholder="Aula (opcional — ex.: Aula 1 e 2 — deixe vazio se for o plano geral do curso)" value={rotuloPlano} onChange={(e) => setRotuloPlano(e.target.value)} />
-                <button className="botao fantasma" onClick={() => salvarPlano(grupo.id)}>Salvar plano</button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="botao fantasma" onClick={() => salvarPlano(grupo.id)}>{editandoPlanoId ? 'Atualizar plano' : 'Salvar plano'}</button>
+                  {editandoPlanoId && <button className="botao fantasma" onClick={cancelarEdicaoPlano}>Cancelar</button>}
+                </div>
 
                 {tarefasDoGrupo.length > 0 && (
                   <>
@@ -265,18 +317,22 @@ export default function AdminGrupos() {
                         </div>
                         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                           <span className={`marcador ${t.status === 'concluida' ? 'feito' : ''}`}>{t.status}</span>
+                          <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => editarTarefa(t)}>Editar</button>
                           <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => removerTarefaDesignada(t.id, grupo.id)}>Remover</button>
                         </div>
                       </div>
                     ))}
                   </>
                 )}
-                <label className="rotulo" style={{ marginTop: 16 }}>Tarefa designada ao grupo</label>
+                <label className="rotulo" style={{ marginTop: 16 }}>{editandoTarefaId ? 'Editando tarefa do grupo' : 'Tarefa designada ao grupo'}</label>
                 <input className="campo" placeholder="Título" value={tituloTarefa} onChange={(e) => setTituloTarefa(e.target.value)} />
                 <input className="campo" placeholder="Descrição" value={descricaoTarefa} onChange={(e) => setDescricaoTarefa(e.target.value)} />
                 <input className="campo" type="date" value={prazoTarefa} onChange={(e) => setPrazoTarefa(e.target.value)} />
                 <input className="campo" placeholder="Aula (opcional — ex.: Aula 1 e 2)" value={rotuloTarefa} onChange={(e) => setRotuloTarefa(e.target.value)} />
-                <button className="botao fantasma" onClick={() => salvarTarefa(grupo.id)}>Designar tarefa</button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="botao fantasma" onClick={() => salvarTarefa(grupo.id)}>{editandoTarefaId ? 'Atualizar tarefa' : 'Designar tarefa'}</button>
+                  {editandoTarefaId && <button className="botao fantasma" onClick={cancelarEdicaoTarefa}>Cancelar</button>}
+                </div>
                 <p className="painel-legenda" style={{ marginTop: 6 }}>
                   O status da tarefa é único pro grupo inteiro — quando alguém do grupo (ou você) marcar como entregue/concluída, vale pra todo mundo do grupo.
                 </p>
@@ -290,16 +346,22 @@ export default function AdminGrupos() {
                           <div className="aula-titulo">{g.titulo}{g.aula_rotulo && <span className="marcador" style={{ marginLeft: 8 }}>{g.aula_rotulo}</span>}</div>
                           <p className="painel-legenda" style={{ margin: 0 }}>{new Date(g.data_aula).toLocaleDateString('pt-BR')}</p>
                         </div>
-                        <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => removerGravacao(g.id, grupo.id)}>Remover</button>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => editarGravacao(g)}>Editar</button>
+                          <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => removerGravacao(g.id, grupo.id)}>Remover</button>
+                        </div>
                       </div>
                     ))}
                   </>
                 )}
-                <label className="rotulo" style={{ marginTop: 16 }}>Aula gravada do grupo (link do Teams)</label>
+                <label className="rotulo" style={{ marginTop: 16 }}>{editandoGravacaoId ? 'Editando gravação do grupo' : 'Aula gravada do grupo (link do Teams)'}</label>
                 <input className="campo" placeholder="Título (ex.: Aula 12/09)" value={tituloGravacao} onChange={(e) => setTituloGravacao(e.target.value)} />
                 <input className="campo" placeholder="Link da gravação" value={linkGravacao} onChange={(e) => setLinkGravacao(e.target.value)} />
                 <input className="campo" placeholder="Aula (rótulo — ex.: Aula 1 e 2)" value={rotuloGravacao} onChange={(e) => setRotuloGravacao(e.target.value)} />
-                <button className="botao fantasma" onClick={() => salvarGravacao(grupo.id)}>Vincular gravação</button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="botao fantasma" onClick={() => salvarGravacao(grupo.id)}>{editandoGravacaoId ? 'Atualizar gravação' : 'Vincular gravação'}</button>
+                  {editandoGravacaoId && <button className="botao fantasma" onClick={cancelarEdicaoGravacao}>Cancelar</button>}
+                </div>
               </div>
             )}
           </div>

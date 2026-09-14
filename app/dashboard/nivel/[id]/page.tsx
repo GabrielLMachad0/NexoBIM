@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '../../../../lib/supabaseClient';
 import Cabecalho from '../../../../components/Cabecalho';
+import Esqueleto from '../../../../components/Esqueleto';
 
 type Aula = { id: string; titulo: string; descricao: string; youtube_id: string; ordem: number };
 type TarefaPadrao = { id: string; titulo: string; descricao: string };
@@ -215,7 +216,7 @@ export default function NivelPage() {
     doc.save(`certificado-nexobim-${nivel.nome}.pdf`);
   }
 
-  if (carregando) return <div className="envolucro">Carregando...</div>;
+  if (carregando) return <Esqueleto />;
   if (!nivel) return null;
 
   const aulasOrdenadas = [...nivel.aulas].sort((a, b) => a.ordem - b.ordem);
@@ -243,13 +244,24 @@ export default function NivelPage() {
             </div>
             <p className="painel-titulo" style={{ marginTop: 16 }}>{aulaSelecionada.titulo}</p>
             {aulaSelecionada.descricao && <p className="cartao-curso-texto">{aulaSelecionada.descricao}</p>}
-            {assistidas.has(aulaSelecionada.id) ? (
-              <span className="marcador feito">assistida</span>
-            ) : (
-              <button className="botao fantasma" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => marcarAulaAssistida(aulaSelecionada.id)}>
-                marcar como assistida
-              </button>
-            )}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              {assistidas.has(aulaSelecionada.id) ? (
+                <span className="marcador feito">assistida</span>
+              ) : (
+                <button className="botao fantasma" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => marcarAulaAssistida(aulaSelecionada.id)}>
+                  marcar como assistida
+                </button>
+              )}
+              {(() => {
+                const proximaAula = aulasOrdenadas.find((a) => a.ordem > aulaSelecionada.ordem);
+                if (!proximaAula) return null;
+                return (
+                  <button className="botao" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => setAulaSelecionada(proximaAula)}>
+                    Próxima aula: {proximaAula.titulo} →
+                  </button>
+                );
+              })()}
+            </div>
           </div>
         ) : (
           <div className="painel player-painel player-vazio">

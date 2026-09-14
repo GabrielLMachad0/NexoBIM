@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { comLinksClicaveis } from '../lib/linkify';
 import { agruparConteudoPorAula, planosGerais, AulaGravada, Plano, TarefaDesignada } from '../lib/aulaParticular';
@@ -10,18 +10,51 @@ type Props = {
   planos: Plano[];
   tarefasDesignadas: TarefaDesignada[];
   hrefPlano: string;
+  // Chave única (normalmente o id do aluno) usada para lembrar, no navegador
+  // dele, qual foi a última aula/tarefa aberta — vira o "continuar de onde
+  // parei". Sem essa chave (ex.: pré-visualização do admin) o recurso fica
+  // desligado, porque aí seria o navegador do admin guardando isso, não o do aluno.
+  chaveContinuar?: string | null;
 };
 
 function formatarData(data: string): string {
   return new Date(data + 'T00:00:00').toLocaleDateString('pt-BR');
 }
 
-export default function SecaoAulaParticular({ aulasGravadas, planos, tarefasDesignadas, hrefPlano }: Props) {
+function idDoVideoDrive(url: string): string | null {
+  const match = url.match(/\/d\/([^/]+)/) || url.match(/id=([^&]+)/);
+  return match ? match[1] : null;
+}
+
+export default function SecaoAulaParticular({ aulasGravadas, planos, tarefasDesignadas, hrefPlano, chaveContinuar }: Props) {
   const [rotuloAberto, setRotuloAberto] = useState<string | null>(null);
   const [tarefaAbertaId, setTarefaAbertaId] = useState<string | null>(null);
+  const [ultimoRotulo, setUltimoRotulo] = useState<string | null>(null);
 
   const aulasAgrupadas = agruparConteudoPorAula(aulasGravadas, planos, tarefasDesignadas);
   const geral = planosGerais(planos);
+
+  useEffect(() => {
+    if (!chaveContinuar) return;
+    try {
+      const salvo = window.localStorage.getItem(`nexobim:continuar:${chaveContinuar}`);
+      if (salvo) setUltimoRotulo(salvo);
+    } catch {
+      // localStorage pode não estar disponível (ex.: navegação privada) — sem problema, só não lembra.
+    }
+  }, [chaveContinuar]);
+
+  function abrirAula(rotulo: string) {
+    const novoAberto = rotuloAberto === rotulo ? null : rotulo;
+    setRotuloAberto(novoAberto);
+    if (novoAberto && chaveContinuar) {
+      try {
+        window.localStorage.setItem(`nexobim:continuar:${chaveContinuar}`, novoAberto);
+      } catch {
+        // ignora se não puder salvar
+      }
+    }
+  }
 
   const dataPorRotulo = new Map(aulasAgrupadas.map((a) => [a.rotulo, a.dataOrdenacao]));
   const tarefasOrdenadas = [...tarefasDesignadas].sort((a, b) => {
@@ -45,13 +78,20 @@ export default function SecaoAulaParticular({ aulasGravadas, planos, tarefasDesi
 
       {aulasAgrupadas.length > 0 && (
         <>
+          {ultimoRotulo && ultimoRotulo !== rotuloAberto && aulasAgrupadas.some((a) => a.rotulo === ultimoRotulo) && (
+            <button className="painel continuar-card" style={{ marginBottom: 20, width: '100%', border: 'none', cursor: 'pointer' }} onClick={() => abrirAula(ultimoRotulo)}>
+              <span className="etiqueta-nivel">Continuar de onde parei</span>
+              <p className="painel-titulo" style={{ margin: 0 }}>{ultimoRotulo}</p>
+            </button>
+          )}
+
           <p className="painel-legenda titulo-categoria-recurso">Aulas</p>
           <div className="grade-baloes">
             {aulasAgrupadas.map((a) => (
               <button
                 key={a.rotulo}
                 className={`balao ${rotuloAberto === a.rotulo ? 'ativo' : ''}`}
-                onClick={() => setRotuloAberto(rotuloAberto === a.rotulo ? null : a.rotulo)}
+                onClick={() => abrirAula(a.rotulo)}
               >
                 {a.rotulo}
               </button>
@@ -66,12 +106,21 @@ export default function SecaoAulaParticular({ aulasGravadas, planos, tarefasDesi
                 <p className="painel-legenda" style={{ margin: 0 }}>Nada cadastrado ainda pra essa aula.</p>
               )}
 
-              {aulaAberta.gravacoes.map((g) => (
-                <div key={g.id} style={{ marginBottom: 12 }}>
-                  <p className="painel-legenda" style={{ margin: '0 0 6px' }}>Gravada em {formatarData(g.data_aula)}</p>
-                  <a className="botao" href={g.video_url} target="_blank" rel="noreferrer">Assistir gravação</a>
-                </div>
-              ))}
+              {aulaAberta.gravacoes.map((g) => {
+                const idDrive = idDoVideoDrive(g.video_url);
+                return (
+                  <div key={g.id} style={{ marginBottom: 12 }}>
+                    <p className="painel-legenda" style={{ margin: '0 0 6px' }}>Gravada em {formatarData(g.data_aula)}</p>
+                    {idDrive ? (
+                      <div className="player-embed">
+                        <iframe src={`https://drive.google.com/file/d/${idDrive}/preview`} title={g.titulo} allow="autoplay" allowFullScreen />
+                      </div>
+                    ) : (
+                      <a className="botao" href={g.video_url} target="_blank" rel="noreferrer">Assistir gravação</a>
+                    )}
+                  </div>
+                );
+              })}
 
               {aulaAberta.resumo && (
                 <>

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { supabase } from '../../../lib/supabaseClient';
 import Cabecalho from '../../../components/Cabecalho';
 import { porGenero } from '../../../lib/genero';
+import Esqueleto from '../../../components/Esqueleto';
 
 type Aluno = { id: string; nome: string; is_assinante: boolean; is_aluno_particular: boolean; grupo_id: string | null; genero: 'masculino' | 'feminino' | null };
 type AcessoPendente = { email: string; is_assinante: boolean; is_aluno_particular: boolean; grupo_id: string | null; atualizado_em: string };
@@ -31,13 +32,16 @@ export default function AdminAlunos() {
   const [motivo, setMotivo] = useState('');
   const [conteudoPlano, setConteudoPlano] = useState('');
   const [rotuloPlano, setRotuloPlano] = useState('');
+  const [editandoPlanoId, setEditandoPlanoId] = useState<string | null>(null);
   const [tituloTarefa, setTituloTarefa] = useState('');
   const [descricaoTarefa, setDescricaoTarefa] = useState('');
   const [prazoTarefa, setPrazoTarefa] = useState('');
   const [rotuloTarefa, setRotuloTarefa] = useState('');
+  const [editandoTarefaId, setEditandoTarefaId] = useState<string | null>(null);
   const [tituloGravacao, setTituloGravacao] = useState('');
   const [linkGravacao, setLinkGravacao] = useState('');
   const [rotuloGravacao, setRotuloGravacao] = useState('');
+  const [editandoGravacaoId, setEditandoGravacaoId] = useState<string | null>(null);
   const [mensagem, setMensagem] = useState('');
 
   const [planosDoAluno, setPlanosDoAluno] = useState<Plano[]>([]);
@@ -74,6 +78,25 @@ export default function AdminAlunos() {
   async function alterarGrupoDoAluno(alunoId: string, grupoId: string) {
     await supabase.from('profiles').update({ grupo_id: grupoId || null }).eq('id', alunoId);
     carregar();
+  }
+
+  function exportarCsv() {
+    const cabecalho = ['Nome', 'Assinante', 'Aluno particular', 'Grupo de estudo'];
+    const linhasCsv = alunos.map((a) => [
+      a.nome,
+      a.is_assinante ? 'sim' : 'não',
+      a.is_aluno_particular ? 'sim' : 'não',
+      grupos.find((g) => g.id === a.grupo_id)?.nome || '',
+    ]);
+    const escapar = (valor: string) => `"${valor.replace(/"/g, '""')}"`;
+    const csv = [cabecalho, ...linhasCsv].map((linha) => linha.map(escapar).join(';')).join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `alunos-nexobim-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
   }
 
   async function carregarPendentes() {
@@ -146,6 +169,7 @@ export default function AdminAlunos() {
   }
 
   async function alternarExpandido(alunoId: string) {
+    cancelarEdicaoPlano(); cancelarEdicaoTarefa(); cancelarEdicaoGravacao();
     if (expandido === alunoId) {
       setExpandido(null);
       return;
@@ -154,31 +178,75 @@ export default function AdminAlunos() {
     await carregarConteudoDoAluno(alunoId);
   }
 
+  function editarPlano(p: Plano) {
+    setEditandoPlanoId(p.id);
+    setMotivo(p.motivo); setConteudoPlano(p.conteudo); setRotuloPlano(p.aula_rotulo || '');
+  }
+
+  function cancelarEdicaoPlano() {
+    setEditandoPlanoId(null);
+    setMotivo(''); setConteudoPlano(''); setRotuloPlano('');
+  }
+
   async function salvarPlano(alunoId: string) {
     if (!motivo || !conteudoPlano) return;
-    await supabase.from('planos_personalizados').insert({ aluno_id: alunoId, motivo, conteudo: conteudoPlano, aula_rotulo: rotuloPlano.trim() || null });
-    setMotivo(''); setConteudoPlano(''); setRotuloPlano('');
-    setMensagem('Plano de aula adicionado.');
+    const dados = { motivo, conteudo: conteudoPlano, aula_rotulo: rotuloPlano.trim() || null };
+    if (editandoPlanoId) {
+      await supabase.from('planos_personalizados').update(dados).eq('id', editandoPlanoId);
+      setMensagem('Plano de aula atualizado.');
+    } else {
+      await supabase.from('planos_personalizados').insert({ aluno_id: alunoId, ...dados });
+      setMensagem('Plano de aula adicionado.');
+    }
+    cancelarEdicaoPlano();
     carregarConteudoDoAluno(alunoId);
+  }
+
+  function editarTarefa(t: TarefaDesignada) {
+    setEditandoTarefaId(t.id);
+    setTituloTarefa(t.titulo); setDescricaoTarefa(t.descricao); setPrazoTarefa(t.prazo || ''); setRotuloTarefa(t.aula_rotulo || '');
+  }
+
+  function cancelarEdicaoTarefa() {
+    setEditandoTarefaId(null);
+    setTituloTarefa(''); setDescricaoTarefa(''); setPrazoTarefa(''); setRotuloTarefa('');
   }
 
   async function salvarTarefa(alunoId: string) {
     if (!tituloTarefa) return;
-    await supabase.from('tarefas_designadas').insert({
-      aluno_id: alunoId, titulo: tituloTarefa, descricao: descricaoTarefa, prazo: prazoTarefa || null, aula_rotulo: rotuloTarefa.trim() || null,
-    });
-    setTituloTarefa(''); setDescricaoTarefa(''); setPrazoTarefa(''); setRotuloTarefa('');
-    setMensagem('Tarefa designada.');
+    const dados = { titulo: tituloTarefa, descricao: descricaoTarefa, prazo: prazoTarefa || null, aula_rotulo: rotuloTarefa.trim() || null };
+    if (editandoTarefaId) {
+      await supabase.from('tarefas_designadas').update(dados).eq('id', editandoTarefaId);
+      setMensagem('Tarefa atualizada.');
+    } else {
+      await supabase.from('tarefas_designadas').insert({ aluno_id: alunoId, ...dados });
+      setMensagem('Tarefa designada.');
+    }
+    cancelarEdicaoTarefa();
     carregarConteudoDoAluno(alunoId);
+  }
+
+  function editarGravacao(g: Gravacao) {
+    setEditandoGravacaoId(g.id);
+    setTituloGravacao(g.titulo); setLinkGravacao(g.video_url); setRotuloGravacao(g.aula_rotulo || '');
+  }
+
+  function cancelarEdicaoGravacao() {
+    setEditandoGravacaoId(null);
+    setTituloGravacao(''); setLinkGravacao(''); setRotuloGravacao('');
   }
 
   async function salvarGravacao(alunoId: string) {
     if (!tituloGravacao || !linkGravacao) return;
-    await supabase.from('aulas_particulares_gravadas').insert({
-      aluno_id: alunoId, titulo: tituloGravacao, video_url: linkGravacao, aula_rotulo: rotuloGravacao.trim() || null,
-    });
-    setTituloGravacao(''); setLinkGravacao(''); setRotuloGravacao('');
-    setMensagem('Gravação vinculada — só esse aluno vai conseguir ver.');
+    const dados = { titulo: tituloGravacao, video_url: linkGravacao, aula_rotulo: rotuloGravacao.trim() || null };
+    if (editandoGravacaoId) {
+      await supabase.from('aulas_particulares_gravadas').update(dados).eq('id', editandoGravacaoId);
+      setMensagem('Gravação atualizada.');
+    } else {
+      await supabase.from('aulas_particulares_gravadas').insert({ aluno_id: alunoId, ...dados });
+      setMensagem('Gravação vinculada — só esse aluno vai conseguir ver.');
+    }
+    cancelarEdicaoGravacao();
     carregarConteudoDoAluno(alunoId);
   }
 
@@ -200,13 +268,20 @@ export default function AdminAlunos() {
     carregarConteudoDoAluno(alunoId);
   }
 
-  if (carregando) return <div className="envolucro">Carregando...</div>;
+  if (carregando) return <Esqueleto />;
 
   return (
     <div>
       <Cabecalho ehAdmin />
       <div className="envolucro">
-        <h1 style={{ fontSize: 20, fontWeight: 500 }}>Alunos</h1>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
+          <h1 style={{ fontSize: 20, fontWeight: 500 }}>Alunos</h1>
+          {alunos.length > 0 && (
+            <button className="botao fantasma" style={{ fontSize: 12, padding: '4px 10px' }} onClick={exportarCsv}>
+              Exportar CSV
+            </button>
+          )}
+        </div>
 
         <div className="painel">
           <p className="painel-titulo">Liberar acesso por e-mail</p>
@@ -328,16 +403,22 @@ export default function AdminAlunos() {
                           <div className="aula-titulo">{p.motivo}{p.aula_rotulo && <span className="marcador" style={{ marginLeft: 8 }}>{p.aula_rotulo}</span>}</div>
                           <p className="painel-legenda" style={{ margin: 0 }}>{p.conteudo}</p>
                         </div>
-                        <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => removerPlano(p.id, aluno.id)}>Remover</button>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => editarPlano(p)}>Editar</button>
+                          <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => removerPlano(p.id, aluno.id)}>Remover</button>
+                        </div>
                       </div>
                     ))}
                   </>
                 )}
-                <label className="rotulo" style={{ marginTop: 16 }}>Plano de aula personalizado</label>
+                <label className="rotulo" style={{ marginTop: 16 }}>{editandoPlanoId ? 'Editando plano de aula' : 'Plano de aula personalizado'}</label>
                 <input className="campo" placeholder="Motivo / dúvida da aula" value={motivo} onChange={(e) => setMotivo(e.target.value)} />
                 <textarea className="campo" placeholder="Conteúdo do plano" rows={3} value={conteudoPlano} onChange={(e) => setConteudoPlano(e.target.value)} />
                 <input className="campo" placeholder="Aula (opcional — ex.: Aula 1 e 2 — deixe vazio se for o plano geral do curso)" value={rotuloPlano} onChange={(e) => setRotuloPlano(e.target.value)} />
-                <button className="botao fantasma" onClick={() => salvarPlano(aluno.id)}>Salvar plano</button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="botao fantasma" onClick={() => salvarPlano(aluno.id)}>{editandoPlanoId ? 'Atualizar plano' : 'Salvar plano'}</button>
+                  {editandoPlanoId && <button className="botao fantasma" onClick={cancelarEdicaoPlano}>Cancelar</button>}
+                </div>
 
                 {tarefasDoAluno.length > 0 && (
                   <>
@@ -350,18 +431,22 @@ export default function AdminAlunos() {
                         </div>
                         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                           <span className={`marcador ${t.status === 'concluida' ? 'feito' : ''}`}>{t.status}</span>
+                          <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => editarTarefa(t)}>Editar</button>
                           <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => removerTarefaDesignada(t.id, aluno.id)}>Remover</button>
                         </div>
                       </div>
                     ))}
                   </>
                 )}
-                <label className="rotulo" style={{ marginTop: 16 }}>Tarefa designada</label>
+                <label className="rotulo" style={{ marginTop: 16 }}>{editandoTarefaId ? 'Editando tarefa' : 'Tarefa designada'}</label>
                 <input className="campo" placeholder="Título" value={tituloTarefa} onChange={(e) => setTituloTarefa(e.target.value)} />
                 <input className="campo" placeholder="Descrição" value={descricaoTarefa} onChange={(e) => setDescricaoTarefa(e.target.value)} />
                 <input className="campo" type="date" value={prazoTarefa} onChange={(e) => setPrazoTarefa(e.target.value)} />
                 <input className="campo" placeholder="Aula (opcional — ex.: Aula 1 e 2)" value={rotuloTarefa} onChange={(e) => setRotuloTarefa(e.target.value)} />
-                <button className="botao fantasma" onClick={() => salvarTarefa(aluno.id)}>Designar tarefa</button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="botao fantasma" onClick={() => salvarTarefa(aluno.id)}>{editandoTarefaId ? 'Atualizar tarefa' : 'Designar tarefa'}</button>
+                  {editandoTarefaId && <button className="botao fantasma" onClick={cancelarEdicaoTarefa}>Cancelar</button>}
+                </div>
 
                 {gravacoesDoAluno.length > 0 && (
                   <>
@@ -372,16 +457,22 @@ export default function AdminAlunos() {
                           <div className="aula-titulo">{g.titulo}{g.aula_rotulo && <span className="marcador" style={{ marginLeft: 8 }}>{g.aula_rotulo}</span>}</div>
                           <p className="painel-legenda" style={{ margin: 0 }}>{new Date(g.data_aula).toLocaleDateString('pt-BR')}</p>
                         </div>
-                        <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => removerGravacao(g.id, aluno.id)}>Remover</button>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => editarGravacao(g)}>Editar</button>
+                          <button className="botao fantasma" style={{ padding: '2px 8px', fontSize: 12 }} onClick={() => removerGravacao(g.id, aluno.id)}>Remover</button>
+                        </div>
                       </div>
                     ))}
                   </>
                 )}
-                <label className="rotulo" style={{ marginTop: 16 }}>Aula particular gravada (link do Teams)</label>
+                <label className="rotulo" style={{ marginTop: 16 }}>{editandoGravacaoId ? 'Editando gravação' : 'Aula particular gravada (link do Teams)'}</label>
                 <input className="campo" placeholder="Título (ex.: Aula 12/09)" value={tituloGravacao} onChange={(e) => setTituloGravacao(e.target.value)} />
                 <input className="campo" placeholder="Link da gravação" value={linkGravacao} onChange={(e) => setLinkGravacao(e.target.value)} />
                 <input className="campo" placeholder="Aula (rótulo — ex.: Aula 1 e 2)" value={rotuloGravacao} onChange={(e) => setRotuloGravacao(e.target.value)} />
-                <button className="botao fantasma" onClick={() => salvarGravacao(aluno.id)}>Vincular gravação</button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="botao fantasma" onClick={() => salvarGravacao(aluno.id)}>{editandoGravacaoId ? 'Atualizar gravação' : 'Vincular gravação'}</button>
+                  {editandoGravacaoId && <button className="botao fantasma" onClick={cancelarEdicaoGravacao}>Cancelar</button>}
+                </div>
               </div>
             )}
           </div>

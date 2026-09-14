@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../../lib/supabaseClient';
 import Cabecalho from '../../../components/Cabecalho';
+import Esqueleto from '../../../components/Esqueleto';
 
 type Recurso = {
   id: string;
@@ -187,7 +188,7 @@ export default function AdminRecursos() {
     setVerificando(false);
   }
 
-  if (carregando) return <div className="envolucro">Carregando...</div>;
+  if (carregando) return <Esqueleto />;
 
   const totalCliques = recursos.reduce((s, r) => s + r.cliques, 0);
   const maisBaixados = [...recursos].sort((a, b) => b.cliques - a.cliques).filter((r) => r.cliques > 0).slice(0, 5);

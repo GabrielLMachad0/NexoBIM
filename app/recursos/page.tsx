@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { supabase } from '../../lib/supabaseClient';
 import Cabecalho from '../../components/Cabecalho';
 import { Recurso, normalizar, slugCategoria, iconeDaCategoria, totalDeArquivos, thumbnailDoRecurso } from '../../lib/recursos';
+import Esqueleto from '../../components/Esqueleto';
 
 export default function Recursos() {
   const router = useRouter();
@@ -60,7 +61,7 @@ export default function Recursos() {
     return Array.from(grupos.entries()).map(([nome, dados]) => ({ nome, ...dados }));
   }, [recursos]);
 
-  if (carregando) return <div className="envolucro">Carregando...</div>;
+  if (carregando) return <Esqueleto />;
 
   return (
     <div>
