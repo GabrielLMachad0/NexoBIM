@@ -218,6 +218,32 @@ create policy "admin gerencia acessos pendentes" on acessos_pendentes for all us
 create policy "ver proprio perfil" on profiles for select using (id = auth.uid() or is_admin());
 create policy "editar proprio perfil" on profiles for update using (id = auth.uid() or is_admin());
 
+-- A policy acima permite update na PRÓPRIA linha, mas não restringe QUAIS
+-- colunas — sem isso, qualquer pessoa logada poderia se dar assinatura, aula
+-- particular ou até virar admin direto pela API. Este trigger trava essas
+-- colunas: só passa se for a admin, a service role (webhooks de pagamento)
+-- ou uma conexão direta ao banco (SQL Editor, migrações — não vem do PostgREST).
+create function protege_colunas_administrativas_do_perfil()
+returns trigger as $$
+begin
+  if not (
+    is_admin()
+    or auth.role() = 'service_role'
+    or current_setting('request.jwt.claims', true) is null
+  ) then
+    new.is_admin := old.is_admin;
+    new.is_assinante := old.is_assinante;
+    new.is_aluno_particular := old.is_aluno_particular;
+    new.grupo_id := old.grupo_id;
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+create trigger trava_colunas_administrativas_do_perfil
+  before update on profiles
+  for each row execute procedure protege_colunas_administrativas_do_perfil();
+
 -- conteúdo padrão: o catálogo (curso/nível/título da aula) é público de propósito —
 -- vira a página /cursos/[slug] pra atrair gente pelo Google, igual a um índice de
 -- programa de curso. O vídeo em si (assistir, marcar progresso, certificado) continua
