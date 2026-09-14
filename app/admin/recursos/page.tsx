@@ -38,6 +38,7 @@ export default function AdminRecursos() {
 
   const [verificando, setVerificando] = useState(false);
   const [linksComProblema, setLinksComProblema] = useState<{ id: string; nome: string; categoria: string; status: number }[] | null>(null);
+  const [ultimaVerificacao, setUltimaVerificacao] = useState<string | null>(null);
 
   const [textoImportacao, setTextoImportacao] = useState('');
   const [mensagemImportacao, setMensagemImportacao] = useState('');
@@ -53,8 +54,21 @@ export default function AdminRecursos() {
     const { data: perfil } = await supabase.from('profiles').select('is_admin').eq('id', sessao.session.user.id).single();
     if (!perfil?.is_admin) { router.push('/dashboard'); return; }
 
-    await carregar();
+    await Promise.all([carregar(), carregarUltimaVerificacao()]);
     setCarregando(false);
+  }
+
+  async function carregarUltimaVerificacao() {
+    const { data } = await supabase
+      .from('verificacoes_links')
+      .select('executado_em, verificados, com_problema')
+      .order('executado_em', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (data) {
+      setUltimaVerificacao(data.executado_em);
+      setLinksComProblema((data as any).com_problema || []);
+    }
   }
 
   async function carregar() {
@@ -186,6 +200,7 @@ export default function AdminRecursos() {
     });
     const dados = await resposta.json();
     setLinksComProblema(dados.comProblema || []);
+    setUltimaVerificacao(new Date().toISOString());
     setVerificando(false);
   }
 
@@ -243,10 +258,18 @@ export default function AdminRecursos() {
 
         <div className="painel">
           <p className="painel-titulo">Verificar links quebrados</p>
-          <p className="painel-legenda">Testa se cada link do Drive ainda responde (não detecta pasta apagada por dentro, só links totalmente inválidos).</p>
+          <p className="painel-legenda">
+            Testa se cada link do Drive ainda responde (não detecta pasta apagada por dentro, só links totalmente inválidos).
+            {' '}Roda automaticamente toda semana — o botão abaixo é só pra checar na hora.
+          </p>
           <button className="botao fantasma" onClick={verificarLinks} disabled={verificando}>
             {verificando ? 'Verificando...' : 'Verificar agora'}
           </button>
+          {ultimaVerificacao && (
+            <p className="painel-legenda" style={{ marginTop: 8, marginBottom: 0 }}>
+              Última verificação: {new Date(ultimaVerificacao).toLocaleString('pt-BR')}
+            </p>
+          )}
           {linksComProblema !== null && (
             linksComProblema.length === 0 ? (
               <p className="painel-legenda" style={{ marginTop: 12, marginBottom: 0 }}>Nenhum problema encontrado.</p>

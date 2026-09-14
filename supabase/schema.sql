@@ -384,3 +384,17 @@ $$;
 
 grant execute on function incrementar_clique_recurso(uuid) to authenticated;
 create policy "admin adiciona aula gravada" on aulas_particulares_gravadas for insert with check (is_admin());
+
+-- Histórico das verificações de link do acervo de recursos (manual ou agendada) —
+-- antes só existia enquanto o admin tinha a aba aberta, sem registro nenhum.
+create table verificacoes_links (
+  id uuid primary key default gen_random_uuid(),
+  executado_em timestamptz not null default now(),
+  verificados int not null default 0,
+  com_problema jsonb not null default '[]'::jsonb
+);
+
+alter table verificacoes_links enable row level security;
+
+create policy "admin le verificacoes de links" on verificacoes_links for select using (is_admin());
+create policy "service_role escreve verificacoes de links" on verificacoes_links for insert to service_role with check (true);

@@ -21,6 +21,8 @@ export default function AdminAlunos() {
   const [carregando, setCarregando] = useState(true);
   const [alunos, setAlunos] = useState<Aluno[]>([]);
   const [busca, setBusca] = useState('');
+  const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
+  const [grupoParaSelecionados, setGrupoParaSelecionados] = useState('');
   const [grupos, setGrupos] = useState<Grupo[]>([]);
   const [pendentes, setPendentes] = useState<AcessoPendente[]>([]);
   const [expandido, setExpandido] = useState<string | null>(null);
@@ -80,6 +82,35 @@ export default function AdminAlunos() {
   async function alterarGrupoDoAluno(alunoId: string, grupoId: string) {
     const { error } = await supabase.from('profiles').update({ grupo_id: grupoId || null }).eq('id', alunoId);
     if (error) { setMensagem(`Não deu para trocar o grupo: ${error.message}`); return; }
+    carregar();
+  }
+
+  function alternarSelecionado(alunoId: string) {
+    setSelecionados((atual) => {
+      const novo = new Set(atual);
+      if (novo.has(alunoId)) novo.delete(alunoId); else novo.add(alunoId);
+      return novo;
+    });
+  }
+
+  async function adicionarSelecionadosAoGrupo() {
+    if (!grupoParaSelecionados || selecionados.size === 0) return;
+    const ids = Array.from(selecionados);
+    const { error } = await supabase.from('profiles').update({ grupo_id: grupoParaSelecionados }).in('id', ids);
+    if (error) { setMensagem(`Não deu para adicionar ao grupo: ${error.message}`); return; }
+    setMensagem(`${ids.length} aluno${ids.length === 1 ? '' : 's'} adicionado${ids.length === 1 ? '' : 's'} ao grupo.`);
+    setSelecionados(new Set());
+    setGrupoParaSelecionados('');
+    carregar();
+  }
+
+  async function liberarFlagSelecionados(campo: 'is_assinante' | 'is_aluno_particular') {
+    if (selecionados.size === 0) return;
+    const ids = Array.from(selecionados);
+    const { error } = await supabase.from('profiles').update({ [campo]: true }).in('id', ids);
+    if (error) { setMensagem(`Não deu para atualizar: ${error.message}`); return; }
+    setMensagem(`${ids.length} aluno${ids.length === 1 ? '' : 's'} atualizado${ids.length === 1 ? '' : 's'}.`);
+    setSelecionados(new Set());
     carregar();
   }
 
@@ -370,9 +401,46 @@ export default function AdminAlunos() {
           </div>
         )}
 
+        {selecionados.size > 0 && (
+          <div className="painel" style={{ borderColor: 'var(--azul-linha)' }}>
+            <p className="painel-titulo" style={{ margin: 0 }}>{selecionados.size} selecionado{selecionados.size === 1 ? '' : 's'}</p>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12, alignItems: 'center' }}>
+              <button className="botao fantasma" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => liberarFlagSelecionados('is_assinante')}>
+                Marcar como assinante
+              </button>
+              <button className="botao fantasma" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => liberarFlagSelecionados('is_aluno_particular')}>
+                Marcar como aluno particular
+              </button>
+              {grupos.length > 0 && (
+                <>
+                  <select className="campo" style={{ marginBottom: 0, width: 'auto' }} value={grupoParaSelecionados} onChange={(e) => setGrupoParaSelecionados(e.target.value)}>
+                    <option value="">Escolha um grupo...</option>
+                    {grupos.map((g) => <option value={g.id} key={g.id}>{g.nome}</option>)}
+                  </select>
+                  <button className="botao fantasma" style={{ fontSize: 12, padding: '4px 10px' }} onClick={adicionarSelecionadosAoGrupo} disabled={!grupoParaSelecionados}>
+                    Adicionar ao grupo
+                  </button>
+                </>
+              )}
+              <button className="botao fantasma" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => setSelecionados(new Set())}>
+                Limpar seleção
+              </button>
+            </div>
+          </div>
+        )}
+
         {alunosFiltrados.map((aluno) => (
           <div className="painel" key={aluno.id}>
-            <p className="painel-titulo">{aluno.nome}</p>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+              <input
+                type="checkbox"
+                style={{ marginTop: 4 }}
+                checked={selecionados.has(aluno.id)}
+                onChange={() => alternarSelecionado(aluno.id)}
+                aria-label={`Selecionar ${aluno.nome}`}
+              />
+              <p className="painel-titulo" style={{ margin: 0 }}>{aluno.nome}</p>
+            </div>
 
             <label style={{ fontSize: 13, marginRight: 16 }}>
               <input type="checkbox" checked={aluno.is_assinante} onChange={() => alternarFlag(aluno, 'is_assinante')} /> Assinante
