@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/admin/verificar-links",
-      "schedule": "0 8 * * 1"
+      "schedule": "0 8 * * *"
     }
   ]
 }
