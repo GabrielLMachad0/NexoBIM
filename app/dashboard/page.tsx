@@ -173,41 +173,46 @@ export default function Dashboard() {
 
             <h2 style={{ fontSize: 15, fontWeight: 500, color: 'var(--texto-suave)', marginTop: 28 }}>Seus cursos</h2>
 
-            <div className="grade-niveis">
-              {cursos.map((curso) =>
-                curso.niveis
-                  .sort((a, b) => a.ordem - b.ordem)
-                  .map((nivel) => {
-                    const totalItens = nivel.aulas.length + nivel.tarefas_padrao.length;
-                    const feitos =
-                      nivel.aulas.filter((a) => assistidas.has(a.id)).length +
-                      nivel.tarefas_padrao.filter((t) => tarefasFeitas.has(t.id)).length;
-                    const completo = totalItens > 0 && feitos === totalItens;
+            {cursos.map((curso) => (
+              <div key={curso.id} style={{ marginBottom: 8 }}>
+                <p className="painel-legenda titulo-categoria-recurso" style={{ marginBottom: 8 }}>
+                  {curso.nome}{curso.niveis.length > 1 ? ` · ${curso.niveis.length} níveis` : ''}
+                </p>
+                <div className="grade-niveis">
+                  {curso.niveis
+                    .sort((a, b) => a.ordem - b.ordem)
+                    .map((nivel, indice) => {
+                      const totalItens = nivel.aulas.length + nivel.tarefas_padrao.length;
+                      const feitos =
+                        nivel.aulas.filter((a) => assistidas.has(a.id)).length +
+                        nivel.tarefas_padrao.filter((t) => tarefasFeitas.has(t.id)).length;
+                      const completo = totalItens > 0 && feitos === totalItens;
 
-                    const percentual = totalItens > 0 ? (feitos / totalItens) * 100 : 0;
+                      const percentual = totalItens > 0 ? (feitos / totalItens) * 100 : 0;
 
-                    return (
-                      <Link href={`/dashboard/nivel/${nivel.id}`} className="painel cartao-nivel cartao-nivel-com-anel" key={nivel.id}>
-                        <div className="cartao-nivel-topo">
-                          <div>
-                            <span className="etiqueta-nivel">{nivel.nome}</span>
-                            <p className="painel-titulo">{curso.nome}</p>
+                      return (
+                        <Link href={`/dashboard/nivel/${nivel.id}`} className="painel cartao-nivel cartao-nivel-com-anel" key={nivel.id}>
+                          <div className="cartao-nivel-topo">
+                            <div>
+                              {curso.niveis.length > 1 && <span className="etiqueta-nivel">Nível {indice + 1}</span>}
+                              <p className="painel-titulo">{nivel.nome}</p>
+                            </div>
+                            <AnelProgresso percentual={percentual} />
                           </div>
-                          <AnelProgresso percentual={percentual} />
-                        </div>
-                        <p className="painel-legenda">{nivel.aulas.length} aula{nivel.aulas.length === 1 ? '' : 's'}</p>
-                        {completo ? (
-                          <span className="marcador feito">
-                            {certificados.has(nivel.id) ? 'certificado emitido' : 'concluído'}
-                          </span>
-                        ) : (
-                          <span className="marcador">{feitos}/{totalItens} concluído{feitos === 1 ? '' : 's'}</span>
-                        )}
-                      </Link>
-                    );
-                  })
-              )}
-            </div>
+                          <p className="painel-legenda">{nivel.aulas.length} aula{nivel.aulas.length === 1 ? '' : 's'}</p>
+                          {completo ? (
+                            <span className="marcador feito">
+                              {certificados.has(nivel.id) ? 'certificado emitido' : 'concluído'}
+                            </span>
+                          ) : (
+                            <span className="marcador">{feitos}/{totalItens} concluído{feitos === 1 ? '' : 's'}</span>
+                          )}
+                        </Link>
+                      );
+                    })}
+                </div>
+              </div>
+            ))}
           </>
         )}
       </div>
